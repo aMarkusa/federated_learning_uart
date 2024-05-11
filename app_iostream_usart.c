@@ -158,5 +158,5 @@ void new_params_to_host()
   uint16_t w1_int = (int)(w1 * 100);
   uint16_t b_int = (int)(b * 100);
   uint16_t lowest_mse_int = (int)(lowest_mse * 100);
-  printf("%u:%u:%u\r\n", w1_int, b_int, lowest_mse_int);
+  printf("%u:%u:%u\r", w1_int, b_int, lowest_mse_int);
 }
