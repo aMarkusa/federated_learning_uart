@@ -6,28 +6,30 @@
 
 
 // Function to calculate the mean squared error
-float mean_squared_error(uint16_t* num_samples, float *w1, float *b, uint8_t* inputs, uint8_t* targets) {
+float mean_squared_error(uint16_t* num_samples, float *w1, float *b, float* inputs, float* targets) {
     float error = 0;
     for (int i = 0; i < *num_samples; i++) {
         float prediction = *w1 * inputs[i] + *b;
-        error += (prediction - targets[i]) * (prediction - targets[i]);
+        error += (targets[i] - prediction) * (targets[i] - prediction);
     }
-    return error / *num_samples;
+    return error / (float)(*num_samples);
 }
 
 // Function to update parameters using gradient descent
-void gradient_descent(uint16_t* num_samples, float *w1, float *b, uint8_t* inputs, uint8_t* targets) {
+void gradient_descent(uint16_t* num_samples, float *w1, float *b, float* inputs, float* targets) {
     float w1_gradient = 0, b_gradient = 0;
     for (int i = 0; i < *num_samples; i++) {
         float prediction = *w1 * inputs[i] + *b;
-        w1_gradient += 2 * (prediction - targets[i]) * inputs[i];
-        b_gradient += 2 * (prediction - targets[i]);
+        w1_gradient += (targets[i] - prediction) * inputs[i];
+        b_gradient += (targets[i] - prediction);
     }
-    *w1 -= LEARNING_RATE * w1_gradient / *num_samples;
-    *b -= LEARNING_RATE * b_gradient / *num_samples;
+    w1_gradient = w1_gradient * (-2/(float)(*num_samples));
+    b_gradient = b_gradient * (-2/(float)(*num_samples));
+    *w1 -= LEARNING_RATE * w1_gradient;
+    *b -= LEARNING_RATE * b_gradient;
 }
 
-int train_model(uint16_t num_samples, float* w1, float* b, uint8_t* inputs, uint8_t* targets, float* lowest_mse) {
+int train_model(uint16_t num_samples, float* w1, float* b, float* inputs, float* targets, float* lowest_mse) {
     float mse;
     float best_w1;
     float best_b;

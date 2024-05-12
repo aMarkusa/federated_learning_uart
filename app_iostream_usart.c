@@ -1,19 +1,19 @@
 /***************************************************************************/ /**
-                                                                               * @file
-                                                                               * @brief iostream usart examples functions
-                                                                               *******************************************************************************
-                                                                               * # License
-                                                                               * <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
-                                                                               *******************************************************************************
-                                                                               *
-                                                                               * The licensor of this software is Silicon Laboratories Inc. Your use of this
-                                                                               * software is governed by the terms of Silicon Labs Master Software License
-                                                                               * Agreement (MSLA) available at
-                                                                               * www.silabs.com/about-us/legal/master-software-license-agreement. This
-                                                                               * software is distributed to you in Source Code format and is governed by the
-                                                                               * sections of the MSLA applicable to Source Code.
-                                                                               *
-                                                                               ******************************************************************************/
+* @file
+* @brief iostream usart examples functions
+*******************************************************************************
+* # License
+* <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
+*******************************************************************************
+*
+* The licensor of this software is Silicon Laboratories Inc. Your use of this
+* software is governed by the terms of Silicon Labs Master Software License
+* Agreement (MSLA) available at
+* www.silabs.com/about-us/legal/master-software-license-agreement. This
+* software is distributed to you in Source Code format and is governed by the
+* sections of the MSLA applicable to Source Code.
+*
+******************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +33,7 @@
 #define BUFSIZE 80
 #endif
 #ifndef NUM_SAMPLES
-#define NUM_SAMPLES 100
+#define NUM_SAMPLES 200
 #endif
 
 /*******************************************************************************
@@ -46,8 +46,8 @@ static char buffer[BUFSIZE];
 /* Finite state machine*/
 struct state_machine fsm;
 
-uint8_t inputs[NUM_SAMPLES] = {4,33,69,0,11,27,65,44,4,99,28,26,31,48,62,74,3,18,46,86,34,45,0,68,87,63,47,20,81,65,86,23,74,9,84,20,79,65,93,13,27,75,18,36,85,35,61,91,40,0,54,74,5,99,84,86,81,45,50,80,71,29,18,71,67,87,31,40,26,44,31,57,53,93,29,63,99,52,17,61,17,51,20,7,78,64,21,65,74,91,91,36,47,42,38,9,99,25,97,2};
-uint8_t targets[NUM_SAMPLES] = {6,18,36,5,5,16,33,25,6,54,15,15,20,23,31,40,0,13,27,48,19,25,8,37,48,35,27,13,46,37,46,13,39,8,42,13,43,34,50,9,14,39,11,20,45,22,34,47,22,2,29,39,4,49,45,49,46,23,31,46,40,17,14,40,32,46,16,20,13,23,15,34,28,47,16,32,55,26,14,34,12,26,13,8,42,35,11,34,37,46,49,21,24,24,22,9,55,13,49,2};
+float inputs[NUM_SAMPLES] = {21,94,8,96,57,29,43,27,23,57,92,95,37,46,85,6,90,83,58,23,61,5,70,40,75,57,66,79,2,36,16,79,31,15,40,9,0,95,68,29,12,66,72,84,56,79,72,18,66,93,50,57,22,4,9,65,2,23,56,44,47,0,49,94,22,80,86,21,22,13,73,92,78,36,33,89,47,55,3,83,63,30,53,53,2,13,18,62,70,21,29,14,76,73,73,9,44,48,5,0,30,21,51,61,91,11,98,68,62,68,25,89,42,27,87,38,29,93,41,72,56,19,2,86,31,48,98,70,87,36,82,10,82,19,17,5,4,63,50,60,2,92,81,15,18,5,47,0,85,84,34,6,99,46,88,32,12,28,66,70,95,68,76,17,37,58,71,2,43,36,24,73,34,91,54,47,68,89,36,11,6,14,74,96,86,50,24,18,88,0,27,77,72,6,53,33,62,26,3,82};
+float targets[NUM_SAMPLES] = {30,192,0,214,122,74,78,65,37,135,194,190,80,75,170,42,182,171,125,51,119,9,176,86,141,125,134,181,4,56,25,159,73,4,70,34,-14,200,118,53,39,146,142,148,70,142,124,17,133,181,93,127,35,-8,26,121,51,65,115,91,83,8,119,186,35,148,172,62,18,42,161,179,164,77,83,166,101,117,18,170,127,61,118,98,23,30,31,127,150,62,86,20,160,162,142,18,64,116,39,-5,78,21,104,123,188,36,195,132,125,151,70,174,88,60,165,87,74,194,75,135,107,31,24,201,73,104,212,112,198,81,157,26,168,43,24,22,5,126,105,113,25,171,167,27,10,14,91,-23,179,192,60,9,214,85,181,37,22,78,165,145,193,135,142,22,72,120,137,-5,95,74,27,160,64,179,119,89,153,195,75,39,-2,16,164,187,152,92,49,16,165,-15,82,163,131,26,102,65,151,46,21,167};
 float w1 = 0.0;
 float b = 0.0;
 float global_lowest_mse = 0;
@@ -155,8 +155,8 @@ void app_iostream_usart_process_action(void)
 
 void new_params_to_host()
 {
-  uint16_t w1_int = (int)(w1 * 100);
-  uint16_t b_int = (int)(b * 100);
-  uint16_t lowest_mse_int = (int)(lowest_mse * 100);
-  printf("%u:%u:%u\r", w1_int, b_int, lowest_mse_int);
+  int16_t w1_int = (int)(w1 * 100);
+  int16_t b_int = (int)(b * 100);
+  int16_t lowest_mse_int = (int)(lowest_mse * 100);
+  printf("%d:%d:%u\r", w1_int, b_int, lowest_mse_int);
 }

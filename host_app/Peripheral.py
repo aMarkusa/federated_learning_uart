@@ -2,12 +2,14 @@ class Peripheral():
     def __init__(self, initial_training_params):
         self._params = initial_training_params
         self._latest_mse = 0
-        self._best_mse = 0
+        self._lowest_mse = 0
         self._consecutive_mse_increases = 0
         self._current_training_iteration = 0
         self._ready_to_receive = True
         self._timeout = 60
         self._active_training = False
+        self._training_done = False
+        self._dataset_len = 100
         
     @property
     def params(self):
@@ -25,19 +27,20 @@ class Peripheral():
     def latest_mse(self, mse):
         self._latest_mse = mse
         if self.current_training_iteration == 0:
-            self.best_mse = mse
-        if mse < self.best_mse:
-            self.best_mse = mse
+            self.lowest_mse = mse
+        elif mse < self.lowest_mse:
+            self.lowest_mse = mse
+            self.consecutive_mse_increases = 0
         else:
             self.consecutive_mse_increases = self.consecutive_mse_increases + 1
         
     @property
-    def best_mse(self):
-        return self._best_mse
+    def lowest_mse(self):
+        return self._lowest_mse
     
-    @best_mse.setter
-    def best_mse(self, mse):
-        self._best_mse = mse
+    @lowest_mse.setter
+    def lowest_mse(self, mse):
+        self._lowest_mse = mse
         
     @property
     def consecutive_mse_increases(self):
@@ -79,3 +82,18 @@ class Peripheral():
     def active_training(self, training: bool):
         self._active_training = training
     
+    @property
+    def dataset_len(self):
+        return self._dataset_len
+    
+    @dataset_len.setter
+    def dataset_len(self, len):
+        self._dataset_len = len
+        
+    @property
+    def training_done(self):
+        return self._training_done
+    
+    @training_done.setter
+    def training_done(self, done: bool):
+        self._training_done = done
