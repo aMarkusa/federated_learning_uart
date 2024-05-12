@@ -54,6 +54,7 @@ float global_lowest_mse = 0;
 float global_best_w1;
 float gloabl_best_b;
 float lowest_mse;
+//enum Command command;
 
 /*******************************************************************************
  **************************   GLOBAL FUNCTIONS   *******************************
@@ -156,7 +157,15 @@ void app_iostream_usart_process_action(void)
 void new_params_to_host()
 {
   int16_t w1_int = (int)(w1 * 100);
+  uint8_t w1_lsb = w1_int & 0xFF;
+  uint8_t w1_msb = (w1_int >> 8) & 0xFF;
   int16_t b_int = (int)(b * 100);
+  uint8_t b_lsb = b_int & 0xFF;
+  uint8_t b_msb = (b_int >> 8) & 0xFF;
   int16_t lowest_mse_int = (int)(lowest_mse * 100);
-  printf("%d:%d:%u\r", w1_int, b_int, lowest_mse_int);
+  uint8_t lowest_mse_lsb = lowest_mse_int & 0xFF;
+  uint8_t lowest_mse_msb = (lowest_mse_int >> 8) & 0xFF;
+  uint8_t buffer[10] = {6, LOCAL_PARAMETERS, w1_msb, w1_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb, 0, 0};
+  //printf("%d:%d:%u\r", w1_int, b_int, lowest_mse_int);
+  sl_iostream_write(sl_iostream_vcom_handle, buffer, 10);
 }

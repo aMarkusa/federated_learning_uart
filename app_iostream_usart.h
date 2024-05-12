@@ -30,6 +30,11 @@ struct state_machine {
     enum States prev_state;
 };
 
+enum Command {
+    GLOBAL_PARAMETERS,
+    LOCAL_PARAMETERS,
+};
+
 void new_params_to_host(void);
 
 void set_new_state(enum States new_state);

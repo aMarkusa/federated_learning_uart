@@ -1,6 +1,8 @@
 import serial
 from Peripheral import Peripheral
+from UartProtocol import DataType
 import logging
+import struct
 
 class UartPeripheral(Peripheral):
     def __init__(self, port=None, baud_rate=115200, rtscts=True, initial_training_params = [0,0]):
@@ -36,8 +38,19 @@ class UartPeripheral(Peripheral):
 
     def wait_for_data(self, timeout) -> str: 
         self._connection.timeout = timeout
-        data = self._connection.read_until(b'\r').decode('utf-8')
-        data = data.rstrip()
+        raw_data_header = self._connection.read(2)
+        data_header = struct.unpack('>bb', raw_data_header)
+        data_len = data_header[0]
+        data_type = data_header[1]
+        
+        match data_type:
+            case DataType.LOCAL_PARAMETERS.value:
+                raw_data = self._connection.read(data_len)
+                data = struct.unpack('>hhh', raw_data)
+                data = data.rstrip()
+            case _:
+                pass
+            
         self._logger.info(f"Received: [{data}] from {self.port}")
         return data
     
