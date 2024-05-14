@@ -1,6 +1,6 @@
 import serial
 from Peripheral import Peripheral
-from UartProtocol import DataType
+from UartProtocol import *
 import logging
 import struct
 
@@ -12,6 +12,8 @@ class UartPeripheral(Peripheral):
         self._rtscts = rtscts
         self._connection = None
         self._logger = logging.getLogger(__name__)
+        self._uart_protocol = UartProtocol()
+        self._rx_sequence = []
     
     @property
     def port(self):
@@ -25,11 +27,9 @@ class UartPeripheral(Peripheral):
             self._logger.error(e)
             exit()
             
-    def write_data(self, data: str):
-        port = self.port
-        self._logger.info(f"Sending data: [{data}] to {self.port}")
-        data = data + '\r'
-        data = bytes(data, 'utf-8')
+    def pack_and_write_data(self, data_type: DataType, data: str, sequence):
+        self._logger.info(f"Sending data: [{data_type.value}, {len(data)}, {sequence}, {data[0]}, {data[1]}] to {self.port}")
+        data = self._uart_protocol.construct_uart_packet(data_type, data, sequence)
         try:
             self.flush_input_buffer()
             self._connection.write(data)
@@ -38,21 +38,16 @@ class UartPeripheral(Peripheral):
 
     def wait_for_data(self, timeout) -> str: 
         self._connection.timeout = timeout
-        raw_data_header = self._connection.read(2)
-        data_header = struct.unpack('>bb', raw_data_header)
-        data_len = data_header[0]
-        data_type = data_header[1]
+        raw_data_header = self._connection.read(3)
+        data_header = struct.unpack('>bbb', raw_data_header)
         
-        match data_type:
-            case DataType.LOCAL_PARAMETERS.value:
-                raw_data = self._connection.read(data_len)
-                data = struct.unpack('>hhh', raw_data)
-                data = data.rstrip()
-            case _:
-                pass
-            
-        self._logger.info(f"Received: [{data}] from {self.port}")
-        return data
+        return data_header
+    
+    def read_and_parse_data(self, data_header: list):
+        raw_data = self._connection.read(data_header[1])
+        parsed_data = self._uart_protocol.parse_uart_packet(raw_data, data_header[0])
+        
+        return parsed_data
     
     def flush_input_buffer(self):
         self._connection.reset_input_buffer()

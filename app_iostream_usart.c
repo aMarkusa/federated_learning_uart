@@ -23,6 +23,7 @@
 #include "sl_iostream_handles.h"
 #include "app_iostream_usart.h"
 #include "app_fl.h"
+#include "sl_sleeptimer.h"
 
 /*******************************************************************************
  *******************************   DEFINES   ***********************************
@@ -35,13 +36,13 @@
 #ifndef NUM_SAMPLES
 #define NUM_SAMPLES 200
 #endif
+#ifndef PACKET_HEADER_LEN
+#define PACKET_HEADER_LEN 3
+#endif
 
 /*******************************************************************************
  ***************************  LOCAL VARIABLES   ********************************
  ******************************************************************************/
-
-/* Input buffer */
-static char buffer[BUFSIZE];
 
 /* Finite state machine*/
 struct state_machine fsm;
@@ -67,8 +68,8 @@ void app_iostream_usart_init(void)
 {
   /* Prevent buffering of output/input.*/
 #if !defined(__CROSSWORKS_ARM) && defined(__GNUC__)
-  setvbuf(stdout, NULL, _IONBF, 0); /*Set unbuffered mode for stdout (newlib)*/
-  setvbuf(stdin, NULL, _IONBF, 0);  /*Set unbuffered mode for stdin (newlib)*/
+  //setvbuf(stdout, NULL, _IONBF, 0); /*Set unbuffered mode for stdout (newlib)*/
+  //setvbuf(stdin, NULL, _IONBF, 0);  /*Set unbuffered mode for stdin (newlib)*/
 #endif
 
   /* Setting default stream */
@@ -101,57 +102,41 @@ void fl_fsm(void)
   }
 }
 
-void extract_parameters(char *buffer, size_t len)
+void read_and_parse_uart_packet(uint8_t *header)
 {
-  w1 = atof(buffer);
-  for (uint8_t i = 0; i < len; i++)
-  {
-    if (buffer[i] == '\0')
-    {
-      b = atof(&buffer[i + 1]);
-      break;
-    }
-  }
-}
+  uint8_t data_type = header[0];
+  uint8_t data_len = header[1];
+  uint8_t sequence = header[2];
+  size_t bytes_read;
+  
+  uint8_t packet_data[4];
 
-/***************************************************************************/ /**
-                                                                               * Example ticking function.
-                                                                               ******************************************************************************/
+  sl_iostream_read(sl_iostream_vcom_handle, packet_data, data_len, &bytes_read);
+
+  printf("%d, %d", packet_data[0], packet_data[1]);
+}
 
 void app_iostream_usart_process_action(void)
 {
   int8_t c = 0;
   static uint8_t index = 0;
+  sl_status_t status;
+  uint8_t packet_header[PACKET_HEADER_LEN];
+  size_t bytes_read;
 
+  sl_sleeptimer_delay_millisecond(1);
   /* Retrieve characters, print local echo and full line back */
-  c = getchar();
-  if (c > 0)
+  status = sl_iostream_read(sl_iostream_vcom_handle, packet_header, 3, &bytes_read);
+  
+  if (bytes_read == PACKET_HEADER_LEN && status == SL_STATUS_OK)
   {
-    if (c == ':')
-    {
-      buffer[index] = '\0';
-      index++;
-    }
-    else if (c == '\r')
-    {
-      buffer[index] = '\0';
-      extract_parameters(buffer, sizeof(buffer) / sizeof(char));
-      set_new_state(TRAIN_MODEL);
-      index = 0;
-    }
-    else
-    {
-      if (index < BUFSIZE - 1)
-      {
-        buffer[index] = c;
-        index++;
-      }
+    read_and_parse_uart_packet(packet_header);
 #if LOCAL_ECHO
       /* Local echo */
       putchar(c);
 #endif
     }
-  }
+  
 }
 
 void new_params_to_host()
@@ -165,7 +150,9 @@ void new_params_to_host()
   int16_t lowest_mse_int = (int)(lowest_mse * 100);
   uint8_t lowest_mse_lsb = lowest_mse_int & 0xFF;
   uint8_t lowest_mse_msb = (lowest_mse_int >> 8) & 0xFF;
-  uint8_t buffer[10] = {6, LOCAL_PARAMETERS, w1_msb, w1_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb, 0, 0};
+
+  uint8_t sequence = 0;
+  uint8_t buffer[11] = {LOCAL_PARAMETERS, 6, sequence, w1_msb, w1_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb};
   //printf("%d:%d:%u\r", w1_int, b_int, lowest_mse_int);
-  sl_iostream_write(sl_iostream_vcom_handle, buffer, 10);
+  sl_iostream_write(sl_iostream_vcom_handle, buffer, sizeof(buffer)/sizeof(uint8_t));
 }
