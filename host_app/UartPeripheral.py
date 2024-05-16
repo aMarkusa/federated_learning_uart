@@ -45,7 +45,7 @@ class UartPeripheral(Peripheral):
     
     def read_and_parse_data(self, data_header: list):
         raw_data = self._connection.read(data_header[1])
-        parsed_data = self._uart_protocol.parse_uart_packet(raw_data, data_header[0])
+        parsed_data = self._uart_protocol.parse_uart_packet(raw_data, DataType(data_header[0]))
         
         return parsed_data
     

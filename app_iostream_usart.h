@@ -18,10 +18,12 @@
 #ifndef APP_IOSTREAM_USART
 #define APP_IOSTREAM_USART
 
+#include <stdint.h>
+
 enum States {
-    WAITING_FOR_PARAMS,
+    WAITING_FOR_DATA,
     TRAIN_MODEL,
-    TRANSMIT_NEW_PARAMS,
+    SEND_DATA,
     TRAINING_DONE,
 };
 
@@ -35,7 +37,9 @@ enum Command {
     LOCAL_PARAMETERS,
 };
 
-void new_params_to_host(void);
+void read_and_handle_uart_packet(uint8_t* header);
+
+void send_data(void* data_buffer, uint8_t len, enum Command datatype, uint8_t sequence);
 
 void set_new_state(enum States new_state);
 

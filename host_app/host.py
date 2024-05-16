@@ -8,8 +8,8 @@ import os
 
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
-START_W = 0
-START_B = 0
+START_W = 10
+START_B = 5
 START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0

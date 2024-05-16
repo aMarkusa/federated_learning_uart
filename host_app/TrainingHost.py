@@ -51,8 +51,8 @@ class TrainingHost():
     def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
         match data_header[0]:
             case DataType.LOCAL_PARAMETERS.value:
-                peripheral.params = [parsed_data[0], parsed_data[1]]
-                peripheral.latest_mse = parsed_data[2]
+                peripheral.params = [parsed_data[0] / 100.0, parsed_data[1] / 100.0]
+                peripheral.latest_mse = parsed_data[2] / 100.0
                 
                 
     def update_global_params(self, peripherals:list[UartPeripheral]):
@@ -65,11 +65,12 @@ class TrainingHost():
         
         for peripheral in peripherals:
             peripheral.params = [w_weighted_avg, b_weighted_avg]
+            peripheral.ready_to_receive = True
         
     
     def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
         if peripheral.ready_to_receive:
-            tx_data = [peripheral.params[0], peripheral.params[1]]
+            tx_data = [int(peripheral.params[0] * 100), int(peripheral.params[1] * 100)]
             peripheral.pack_and_write_data(DataType.GLOBAL_PARAMETERS, tx_data, 0)
             peripheral.ready_to_receive = False
             time.sleep(0.1)
