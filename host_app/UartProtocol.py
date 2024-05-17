@@ -11,11 +11,11 @@ class UartProtocol():
         self._sequence_ongoing = False
         self._max_packet_size = max
     
-    def parse_uart_packet(self, raw_data, data_type: DataType):
+    def parse_uart_packet(self, raw_data, data_type: DataType) -> list:
         match data_type:
             case DataType.LOCAL_PARAMETERS:
                 parsed_data = struct.unpack('>hhh', raw_data)
-                return parsed_data
+                return list(parsed_data)
             case _:
                 pass
       

@@ -91,11 +91,11 @@ class TrainingHost():
             for peripheral in self.uart_peripherals:
                 if not peripheral.training_done:
                     thread = Thread(target=self.iterate_model(peripheral))
-                    thread.start()
-                    thread.join()
-                    self._threads.append(thread)
-                self._threads.clear()
-                self.print_peripheral_parameters()
+                    self._threads.append(thread)          
+            [thread.start() for thread in self._threads]
+            [thread.join() for thread in self._threads]
+            self._threads.clear()
+            self.print_peripheral_parameters()
             
             self.update_global_params(self.uart_peripherals)
             if all(periph.training_done for periph in self.uart_peripherals):

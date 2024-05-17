@@ -36,16 +36,17 @@ class UartPeripheral(Peripheral):
         except Exception as e:
             self._logger.error(e)
 
-    def wait_for_data(self, timeout) -> str: 
+    def wait_for_data(self, timeout) -> list: 
         self._connection.timeout = timeout
         raw_data_header = self._connection.read(3)
         data_header = struct.unpack('>bbb', raw_data_header)
         
-        return data_header
+        return list(data_header)
     
     def read_and_parse_data(self, data_header: list):
         raw_data = self._connection.read(data_header[1])
         parsed_data = self._uart_protocol.parse_uart_packet(raw_data, DataType(data_header[0]))
+        self._logger.info(f"Received data {data_header + parsed_data} from {self.port}")
         
         return parsed_data
     

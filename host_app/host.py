@@ -1,4 +1,5 @@
 #!/Users/maanders1/miniconda3/bin/python
+from serial.tools import list_ports
 from UartPeripheral import UartPeripheral
 from TrainingHost import TrainingHost
 import logging
@@ -14,8 +15,6 @@ START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
 
-peripheral_ports = ['/dev/cu.usbmodem0004402930881']
-
 
 def setup_logger():
     # Create a logger
@@ -27,8 +26,10 @@ def setup_logger():
    
 
 if __name__ == "__main__":
+    ports = list(list_ports.comports())
+    peripheral_ports = [port for port in ports if port.device.startswith('/dev/cu.usbmodem')]
     setup_logger()
-    peripherals = [UartPeripheral(initial_training_params=[START_W, START_B], port=port) 
+    peripherals = [UartPeripheral(initial_training_params=[START_W, START_B], port=port.device) 
                    for port in peripheral_ports]
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()
