@@ -3,16 +3,25 @@ import logging
 from UartPeripheral import *
 from UartProtocol import *
 from threading import Thread
+from dataset.LinearDataset import LinearDataset
 import time
 
+# TODO: Check for training done
+
 class TrainingHost():
-    def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = []):
+    def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = [], dataset: LinearDataset = None):
         self._max_iterations = max_iterations
         self._training_limit = training_limit
         self._uart_peripherals : list[UartPeripheral] = uart_peripherals
         self._threads : list[Thread] = []
         self._logger = logging.getLogger(__name__)
         self._protocol = UartProtocol()
+        self._dataset = dataset
+        self._latest_mse = 0
+        self._lowest_mse = 0
+        self._concurrent_mse_increases = 0
+        self._current_training_iteration = 0
+        self._training_done = False
         
     @property
     def max_iterations(self):
@@ -37,6 +46,29 @@ class TrainingHost():
     @uart_peripherals.setter
     def uart_peripherals(self, peripherals):
         self._uart_peripherals = peripherals
+        
+    @property
+    def latest_mse(self):
+        return self._current_mse
+    
+    @latest_mse.setter
+    def latest_mse(self, mse):
+        self._latest_mse = mse
+        if self.current_training_iteration == 0:
+            self.lowest_mse = mse
+        elif mse < self.lowest_mse:
+            self.lowest_mse = mse
+            self.consecutive_mse_increases = 0
+        else:
+            self.consecutive_mse_increases = self.consecutive_mse_increases + 1
+        
+    @property
+    def lowest_mse(self):
+        return self._lowest_mse
+    
+    @lowest_mse.setter
+    def lowest_mse(self, mse):
+        self._lowest_mse = mse
         
     def connect_to_uart_peripherals(self):
         for peripheral in self.uart_peripherals:
@@ -63,6 +95,12 @@ class TrainingHost():
         w_weighted_avg = w_numerator / denominator
         b_weighted_avg = b_numerator / denominator
         
+        self.latest_mse = self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg)
+        
+        self._logger.info(f"Training iteration {self.current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
+        
+        self.latest_mse = mse
+        
         for peripheral in peripherals:
             peripheral.params = [w_weighted_avg, b_weighted_avg]
             peripheral.ready_to_receive = True
@@ -80,10 +118,10 @@ class TrainingHost():
             self.data_handler(peripheral, rx_data_header, parsed_rx_data)    
         else:
             pass
-        '''if peripheral.consecutive_mse_increases >= self.training_limit:
-            peripheral.training_done = True
-            peripheral.consecutive_mse_increases = 0
-        '''
+        if self.consecutive_mse_increases >= self.training_limit:
+            self._training_done = True
+            #self.consecutive_mse_increases = 0
+            
         peripheral.current_training_iteration = peripheral.current_training_iteration + 1
         
     def train_model(self):  
