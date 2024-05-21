@@ -2,11 +2,13 @@
 from serial.tools import list_ports
 from UartPeripheral import UartPeripheral
 from TrainingHost import TrainingHost
-from host_app.dataset.LinearDataset import LinearDataset
+from datasets.LinearDataset import LinearDataset
 import logging
 from time import sleep
 import sys
 import os
+import numpy as np
+from pathlib import Path
 
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
@@ -16,6 +18,7 @@ START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
 
+script_path = str(Path(__file__).resolve().parent)
 
 def setup_logger():
     # Create a logger
@@ -24,11 +27,25 @@ def setup_logger():
     format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=format)
     
-def prepare_dataset(number_of_peripherals):
-    dataset = LinearDataset(5000, -1, 0)
-    dataset.divide_and_save_datasets(2)
+def prepare_datasets(number_of_peripherals):
+    dataset = LinearDataset(920, -1, 0)
+    dataset.divide_and_save_datasets(number_of_peripherals)
     
     return dataset
+
+def assign_partial_datasets(peripherals: list[UartPeripheral]):
+    peripheral_index = 0
+    for file in os.listdir(script_path + '/' + "datasets"):
+        if file.endswith('.csv'):
+            file_path = script_path + '/' + "datasets" + '/' + file
+            data = np.genfromtxt(file_path, delimiter=',',dtype=int, skip_header=True)
+            x_values = data[0:, 0].tolist() 
+            y_values = data[0:, 1].tolist()
+            
+            peripherals[peripheral_index].x_values = x_values
+            peripherals[peripheral_index].y_values = y_values
+            
+            peripheral_index = peripheral_index + 1
 
    
 
@@ -38,10 +55,11 @@ if __name__ == "__main__":
     setup_logger()
     peripherals = [UartPeripheral(initial_training_params=[START_W, START_B], port=port.device) 
                    for port in peripheral_ports]
-    dataset = prepare_dataset(len(peripherals))
+    full_dataset = prepare_datasets(len(peripherals))
+    assign_partial_datasets(peripherals)
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()
-    
+    trainer.send_out_datasets()
     trainer.print_peripheral_parameters()
     trainer.train_model()
         

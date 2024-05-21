@@ -3,13 +3,14 @@ import logging
 from UartPeripheral import *
 from UartProtocol import *
 from threading import Thread
-from dataset.LinearDataset import LinearDataset
+from datasets.LinearDataset import LinearDataset
 import time
 
 # TODO: Check for training done
+# TODO: Add sequence send
 
 class TrainingHost():
-    def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = [], dataset: LinearDataset = None):
+    def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = [], dataset: LinearDataset = None, max_payload = 250):
         self._max_iterations = max_iterations
         self._training_limit = training_limit
         self._uart_peripherals : list[UartPeripheral] = uart_peripherals
@@ -22,6 +23,7 @@ class TrainingHost():
         self._concurrent_mse_increases = 0
         self._current_training_iteration = 0
         self._training_done = False
+        self._max_payload_size = 250
         
     @property
     def max_iterations(self):
@@ -99,8 +101,6 @@ class TrainingHost():
         
         self._logger.info(f"Training iteration {self.current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
         
-        self.latest_mse = mse
-        
         for peripheral in peripherals:
             peripheral.params = [w_weighted_avg, b_weighted_avg]
             peripheral.ready_to_receive = True
@@ -139,3 +139,28 @@ class TrainingHost():
             if all(periph.training_done for periph in self.uart_peripherals):
                 self._logger.info("Training done!")
                 break
+            
+    def send_out_datasets(self):
+        for peripheral in self.uart_peripherals:
+            x_values = peripheral.x_values
+            y_values = peripheral.y_values
+            max_payload_size = self._max_payload_size
+            
+            total_len = len(x_values)
+            peripheral.pack_and_write_data(DataType.SEQUENCE_START, [total_len], 1)
+            remaining_len = total_len
+            sliding_window_start = 0
+            sliding_window_end = max_payload_size
+            while remaining_len > max_payload_size:
+                payload = x_values[sliding_window_start: sliding_window_end]
+                sliding_window_start = sliding_window_end
+                sliding_window_end = sliding_window_end + max_payload_size
+                
+                remaining_len = remaining_len - max_payload_size
+                
+                peripheral.pack_and_write_data(DataType.DATASET_X, payload, 1)
+            
+            sliding_window_end = sliding_window_start + remaining_len   
+            payload = x_values[sliding_window_start: sliding_window_end]
+            
+          

@@ -27,11 +27,11 @@ class UartPeripheral(Peripheral):
             self._logger.error(e)
             exit()
             
-    def pack_and_write_data(self, data_type: DataType, data: str, sequence):
-        self._logger.info(f"Sending data: [{data_type.value}, {len(data)}, {sequence}, {data[0]}, {data[1]}] to {self.port}")
+    def pack_and_write_data(self, data_type: DataType, data: list, sequence):
         data = self._uart_protocol.construct_uart_packet(data_type, data, sequence)
         try:
             self.flush_input_buffer()
+            self._logger.info(f"Sending data: {data} to {self.port}")
             self._connection.write(data)
         except Exception as e:
             self._logger.error(e)

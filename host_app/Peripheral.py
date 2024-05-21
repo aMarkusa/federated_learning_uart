@@ -10,6 +10,8 @@ class Peripheral():
         self._active_training = False
         self._training_done = False
         self._dataset_len = 100
+        self._x_values = []
+        self._y_values = []
         
     @property
     def params(self):
@@ -97,3 +99,19 @@ class Peripheral():
     @training_done.setter
     def training_done(self, done: bool):
         self._training_done = done
+        
+    @property
+    def x_values(self):
+        return self._x_values
+    
+    @x_values.setter
+    def x_values(self, values):
+        self._x_values = values
+        
+    @property
+    def y_values(self):
+        return self._y_values
+    
+    @y_values.setter
+    def y_values(self, values):
+        self._y_values = values
