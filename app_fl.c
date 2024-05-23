@@ -29,7 +29,7 @@ void gradient_descent(uint16_t* num_samples, float *w1, float *b, float* inputs,
     *b -= LEARNING_RATE * b_gradient;
 }
 
-int train_model(uint16_t num_samples, float* w1, float* b, float* inputs, float* targets, float* lowest_mse) {
+int train_model(uint16_t num_samples, float* w1, float* b, int16_t* inputs, int16_t* targets, float* lowest_mse) {
     float mse;
     float best_w1;
     float best_b;

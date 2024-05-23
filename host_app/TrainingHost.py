@@ -23,7 +23,7 @@ class TrainingHost():
         self._concurrent_mse_increases = 0
         self._current_training_iteration = 0
         self._training_done = False
-        self._max_payload_size = 250
+        self._max_payload_size = 250  # this is in int8_t
         
     @property
     def max_iterations(self):
@@ -144,13 +144,14 @@ class TrainingHost():
         for peripheral in self.uart_peripherals:
             x_values = peripheral.x_values
             y_values = peripheral.y_values
-            max_payload_size = self._max_payload_size
+            max_payload_size = int(self._max_payload_size / 2) # The data is in int16_t but must be sent as int8_t
             
             total_len = len(x_values)
-            peripheral.pack_and_write_data(DataType.SEQUENCE_START, [total_len], 1)
             remaining_len = total_len
             sliding_window_start = 0
             sliding_window_end = max_payload_size
+            
+            sequence = 1
             while remaining_len > max_payload_size:
                 payload = x_values[sliding_window_start: sliding_window_end]
                 sliding_window_start = sliding_window_end
@@ -158,7 +159,8 @@ class TrainingHost():
                 
                 remaining_len = remaining_len - max_payload_size
                 
-                peripheral.pack_and_write_data(DataType.DATASET_X, payload, 1)
+                peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence)
+                sequence = sequence + 1
             
             sliding_window_end = sliding_window_start + remaining_len   
             payload = x_values[sliding_window_start: sliding_window_end]

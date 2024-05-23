@@ -4,8 +4,8 @@ import struct
 class DataType(Enum):
     GLOBAL_PARAMETERS = 0  # dtype = int16_t
     LOCAL_PARAMETERS = 1  # dtype = int16_t
-    DATASET_X = 3  # dtype = int16_t
-    DATASET_Y = 4  # dtype = int16_t
+    DATASET_X = 2  # dtype = int16_t
+    DATASET_Y = 3  # dtype = int16_t
     SEQUENCE_START = 5  # dtype = uint16_t
     
 class UartProtocol():
@@ -23,22 +23,19 @@ class UartProtocol():
                 pass
       
     def construct_uart_packet(self, data_type: DataType, data: list, sequence):
+        data_points_num = len(data)
         match data_type:
             case DataType.GLOBAL_PARAMETERS:
-                data_len = len(data) * 2 
+                data_len = data_points_num * 2 
                 format = ">BBBhh"
-            case DataType.SEQUENCE_START:
-                data_len = len(data) * 2 
-                data[0] = data[0] * 2
-                format = ">BBBH"
             case DataType.DATASET_X | DataType.DATASET_Y:
-                data_len = len(data) * 2
-                format = f">BBB{data_len + 3}h"
+                data_len = data_points_num * 2
+                format = f">BBB{data_points_num}h"
             case _:
                 pass
             
         packet = [data_type.value, data_len, sequence]  # header
         packet.extend(data)
-        packed_data = struct.pack(format, 5,2,1,1840)
+        packed_data = struct.pack(format, *packet)
         
         return packed_data

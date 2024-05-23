@@ -35,6 +35,8 @@ struct state_machine {
 enum Command {
     GLOBAL_PARAMETERS,
     LOCAL_PARAMETERS,
+    DATASET_X,
+    DATASET_Y,
 };
 
 void read_and_handle_uart_packet(uint8_t* header);

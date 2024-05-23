@@ -55,7 +55,7 @@ if __name__ == "__main__":
     setup_logger()
     peripherals = [UartPeripheral(initial_training_params=[START_W, START_B], port=port.device) 
                    for port in peripheral_ports]
-    full_dataset = prepare_datasets(len(peripherals))
+    #full_dataset = prepare_datasets(len(peripherals))
     assign_partial_datasets(peripherals)
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()
