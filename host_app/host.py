@@ -59,7 +59,7 @@ if __name__ == "__main__":
     assign_partial_datasets(peripherals)
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()
-    trainer.send_out_datasets()
+    trainer.send_out_training_data()
     trainer.print_peripheral_parameters()
     trainer.train_model()
         

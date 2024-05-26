@@ -140,7 +140,7 @@ class TrainingHost():
                 self._logger.info("Training done!")
                 break
             
-    def send_out_datasets(self):
+    def send_out_training_data(self):
         for peripheral in self.uart_peripherals:
             x_values = peripheral.x_values
             y_values = peripheral.y_values
@@ -151,18 +151,21 @@ class TrainingHost():
             sliding_window_start = 0
             sliding_window_end = max_payload_size
             
-            sequence = 1
-            while remaining_len > max_payload_size:
+            sequence_nr = 1
+            while remaining_len > 0:
                 payload = x_values[sliding_window_start: sliding_window_end]
                 sliding_window_start = sliding_window_end
+                
+                remaining_len = remaining_len - max_payload_size * sequence_nr
+                
+                peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence_nr)
+                if (sequence_nr % 5) == 0:
+                    ack_data = peripheral.wait_for_ack()
+                    sequence_nr = ack_data
+                    sliding_window_start = sequence_nr * max_payload_size + 1
+                    
                 sliding_window_end = sliding_window_end + max_payload_size
-                
-                remaining_len = remaining_len - max_payload_size
-                
-                peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence)
-                sequence = sequence + 1
-            
-            sliding_window_end = sliding_window_start + remaining_len   
-            payload = x_values[sliding_window_start: sliding_window_end]
+                sequence_nr = sequence_nr + 1
+
             
           

@@ -25,6 +25,7 @@
 #include "app_iostream_usart.h"
 #include "app_fl.h"
 #include "sl_sleeptimer.h"
+#include "uart_data_handlers.h"
 
 /*******************************************************************************
  *******************************   DEFINES   ***********************************
@@ -62,13 +63,6 @@ float lowest_mse;
 
 void app_iostream_usart_init(void)
 {
-  /* Prevent buffering of output/input.*/
-#if !defined(__CROSSWORKS_ARM) && defined(__GNUC__)
-  //setvbuf(stdout, NULL, _IONBF, 0); /*Set unbuffered mode for stdout (newlib)*/
-  //setvbuf(stdin, NULL, _IONBF, 0);  /*Set unbuffered mode for stdin (newlib)*/
-#endif
-
-  /* Setting default stream */
   sl_iostream_set_default(sl_iostream_vcom_handle);
 }
 
@@ -82,7 +76,7 @@ void fl_fsm(void)
 {
   switch (fsm.state)
   {
-    case WAITING_FOR_DATA:
+    case RECEIVE_DATA:
       app_iostream_usart_process_action();
       break;
     case TRAIN_MODEL:
@@ -92,20 +86,10 @@ void fl_fsm(void)
     case SEND_DATA:
       float parameters[3] = {current_w, current_b, lowest_mse};
       send_data((void*)parameters, 3, LOCAL_PARAMETERS, 0);
-      set_new_state(WAITING_FOR_DATA);
+      set_new_state(RECEIVE_DATA);
       break;
     default:
       break;
-  }
-}
-
-void convert_int8_t_array_to_int16_t_array(int8_t* input_array, uint8_t input_len, int16_t* output_array){
-
-  uint8_t len = sizeof(input_array);
-  uint8_t num_pairs = input_len / 2;  // We have pairs of int8_t that form one int16_t
-
-  for (uint8_t i = 0; i < num_pairs; i++){
-    output_array[i] = ((int16_t)input_array[2 * i] << 8) | (int16_t)input_array[2 * i + 1];
   }
 }
 
@@ -113,7 +97,7 @@ void read_and_handle_uart_packet(uint8_t *header)
 {
   uint8_t data_type = header[0];
   uint8_t data_len = header[1];
-  uint8_t sequence = header[2];
+  uint8_t sequence_nr = header[2];
   size_t bytes_read;
   
   int8_t packet_data[PACKET_DATA_BUFFER_LEN];
@@ -124,8 +108,8 @@ void read_and_handle_uart_packet(uint8_t *header)
     switch (data_type)
     {
       case GLOBAL_PARAMETERS:
-        int16_t global_w;
-        int16_t global_b;
+        int16_t global_w = 0;
+        int16_t global_b = 0;
 
         global_w = (global_w & packet_data[0]) << 8;
         global_w = global_w & packet_data[1];
@@ -139,24 +123,15 @@ void read_and_handle_uart_packet(uint8_t *header)
         set_new_state(TRAIN_MODEL);
         break;
       case DATASET_X:
-        static uint8_t previous_sequence_nr = 0;
-        static uint16_t total_sequence_len = 0;
-        if (sequence == (previous_sequence_nr + 1) || sequence == 255){
-          uint16_t pointer_start = total_sequence_len;
-          total_sequence_len += data_len / 2;
-          x_values = realloc(x_values, total_sequence_len);
-          convert_int8_t_array_to_int16_t_array(packet_data, data_len, x_values + (pointer_start));
-          previous_sequence_nr++;
-          if (x_values == NULL){
-            // do something
-          }
-        }
+        training_data_handler(packet_data, data_len, x_values, sequence_nr);
+        break;
+      case DATASET_Y:
+        training_data_handler(packet_data, data_len, y_values, sequence_nr);
+        break;        
       default:
         break;
     }
-  }
-
-  
+  } 
 }
 
 void app_iostream_usart_process_action(void)
@@ -185,6 +160,7 @@ void send_data(void* data_buffer, uint8_t len, enum Command datatype, uint8_t se
   switch (datatype)
   {
     case LOCAL_PARAMETERS:
+    {
       float* buffer = (float*)data_buffer;
       int16_t trained_w = buffer[0] * 100;  // Two decimals
       int16_t trained_b = buffer[1] * 100;
@@ -197,9 +173,15 @@ void send_data(void* data_buffer, uint8_t len, enum Command datatype, uint8_t se
       int8_t lowest_mse_lsb = lowest_mse_int & 0xFF;
       int8_t lowest_mse_msb = (lowest_mse_int >> 8) & 0xFF;
 
-      int8_t tx_buffer[9] = {datatype, len*2, sequence, w_msb, w_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb};
+      int8_t tx_buffer[] = {datatype, len*2, sequence, w_msb, w_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb};
       sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer)/sizeof(uint8_t));
       break;
+    }
+    case ACK:
+    {
+      int8_t tx_buffer[] = {datatype, len, sequence, *(int8_t*)data_buffer};
+      sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer)/sizeof(uint8_t));
+    }
     default:
     break;
   }

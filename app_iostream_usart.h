@@ -19,9 +19,10 @@
 #define APP_IOSTREAM_USART
 
 #include <stdint.h>
+#include "uart_data_handlers.h"
 
 enum States {
-    WAITING_FOR_DATA,
+    RECEIVE_DATA,
     TRAIN_MODEL,
     SEND_DATA,
     TRAINING_DONE,
@@ -30,13 +31,6 @@ enum States {
 struct state_machine {
     enum States state;
     enum States prev_state;
-};
-
-enum Command {
-    GLOBAL_PARAMETERS,
-    LOCAL_PARAMETERS,
-    DATASET_X,
-    DATASET_Y,
 };
 
 void read_and_handle_uart_packet(uint8_t* header);

@@ -55,6 +55,12 @@ class UartPeripheral(Peripheral):
         
     def kill_interface(self):
         self._connection.close()
+        
+    def wait_for_ack(self):
+        ack_header = self.wait_for_data(2)
+        if ack_header:
+            ack_data = self.read_and_parse_data(ack_header)
+            return ack_data
             
         
     
