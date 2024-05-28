@@ -3,31 +3,37 @@
 #include <stdlib.h>
 
 
-void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t* training_data_array, uint8_t sequence_nr){
+void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t** training_data_array, uint8_t sequence_nr){
   static uint8_t previous_sequence_nr = 0;
-  static uint8_t total_sequence_len = 0;  // How long is the received sequence so far
+  static uint16_t total_sequence_bytes = 0;  // How long is the received sequence so far
   static uint8_t total_packets_received = 0;  // How many packets have been received, including discarded packets
   static uint8_t consecutive_lost_packets = 0;
-
-  uint16_t pointer_start = total_sequence_len;
-  total_sequence_len += data_len / 2;
+  static uint16_t append_start_pointer = 0;
+  uint16_t* tmp = NULL;
 
   if (sequence_nr == (previous_sequence_nr + 1)){
-    training_data_array = realloc(training_data_array, total_sequence_len);
-    if (training_data_array == NULL){
-      // do something
+    total_sequence_bytes += data_len;
+    tmp = realloc(*training_data_array, total_sequence_bytes);
+    if (tmp == NULL){
+      // Do something
     }
-    convert_int8_t_array_to_int16_t_array(packet_data, data_len, training_data_array + (pointer_start));
+    else {
+      *training_data_array = tmp;
+    }
+    previous_sequence_nr = sequence_nr;
+    convert_int8_t_array_to_int16_t_array(packet_data, data_len, *training_data_array + (append_start_pointer));
+    append_start_pointer = total_sequence_bytes / 2;
     consecutive_lost_packets = 0;
   }
   else if (sequence_nr == 255){
     if (consecutive_lost_packets == 0){
         previous_sequence_nr = sequence_nr;
-        training_data_array = realloc(training_data_array, total_sequence_len);
+        training_data_array = realloc(training_data_array, total_sequence_bytes);
         if (training_data_array == NULL){
           // do something
         }
-        convert_int8_t_array_to_int16_t_array(packet_data, data_len, training_data_array + (pointer_start));
+        convert_int8_t_array_to_int16_t_array(packet_data, data_len, *training_data_array + (append_start_pointer));
+        append_start_pointer = total_sequence_bytes - 1;
       }
   }
   else {

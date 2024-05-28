@@ -156,8 +156,10 @@ class TrainingHost():
                 payload = x_values[sliding_window_start: sliding_window_end]
                 sliding_window_start = sliding_window_end
                 
-                remaining_len = remaining_len - max_payload_size * sequence_nr
-                
+                if remaining_len > max_payload_size:
+                    remaining_len = remaining_len - max_payload_size
+                else:
+                    sequence_nr = 255
                 peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence_nr)
                 if (sequence_nr % 5) == 0:
                     ack_data = peripheral.wait_for_ack()
@@ -166,6 +168,7 @@ class TrainingHost():
                     
                 sliding_window_end = sliding_window_end + max_payload_size
                 sequence_nr = sequence_nr + 1
+                time.sleep(0.1)
 
             
           

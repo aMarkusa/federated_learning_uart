@@ -6,7 +6,7 @@ class DataType(Enum):
     LOCAL_PARAMETERS = 1  # dtype = int16_t
     DATASET_X = 2  # dtype = int16_t
     DATASET_Y = 3  # dtype = int16_t
-    SEQUENCE_START = 5  # dtype = uint16_t
+    ACK = 4  # dtype = uint8_t
     
 class UartProtocol():
     def __init__(self, max_packet_size=64):
