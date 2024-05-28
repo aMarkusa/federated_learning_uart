@@ -18,6 +18,20 @@
 #ifndef APP_IOSTREAM_USART
 #define APP_IOSTREAM_USART
 
+#define LOCAL_ECHO 0
+#ifndef BUFSIZE
+#define BUFSIZE 80
+#endif
+#ifndef NUM_SAMPLES
+#define NUM_SAMPLES 200
+#endif
+#ifndef PACKET_HEADER_SIZE
+#define PACKET_HEADER_SIZE 3
+#endif
+#ifndef PACKET_DATA_BUFFER_SIZE
+#define PACKET_DATA_BUFFER_SIZE 256
+#endif
+
 #include <stdint.h>
 #include "uart_data_handlers.h"
 

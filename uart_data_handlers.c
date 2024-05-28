@@ -3,13 +3,13 @@
 #include <stdlib.h>
 
 
-void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t** training_data_array, uint8_t sequence_nr){
+void training_data_handler(uint8_t* packet_data, uint8_t data_len, int16_t** training_data_array, uint8_t sequence_nr){
   static uint8_t previous_sequence_nr = 0;
   static uint16_t total_sequence_bytes = 0;  // How long is the received sequence so far
   static uint8_t total_packets_received = 0;  // How many packets have been received, including discarded packets
   static uint8_t consecutive_lost_packets = 0;
   static uint16_t append_start_pointer = 0;
-  uint16_t* tmp = NULL;
+  int16_t* tmp = NULL;
 
   if (sequence_nr == (previous_sequence_nr + 1)){
     total_sequence_bytes += data_len;
@@ -21,7 +21,7 @@ void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t** trai
       *training_data_array = tmp;
     }
     previous_sequence_nr = sequence_nr;
-    convert_int8_t_array_to_int16_t_array(packet_data, data_len, *training_data_array + (append_start_pointer));
+    convert_uint8_t_array_to_int16_t_array(packet_data + PACKET_HEADER_SIZE, data_len, *training_data_array + (append_start_pointer));
     append_start_pointer = total_sequence_bytes / 2;
     consecutive_lost_packets = 0;
   }
@@ -32,7 +32,7 @@ void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t** trai
         if (training_data_array == NULL){
           // do something
         }
-        convert_int8_t_array_to_int16_t_array(packet_data, data_len, *training_data_array + (append_start_pointer));
+        convert_uint8_t_array_to_int16_t_array(packet_data + PACKET_HEADER_SIZE, data_len, *training_data_array + (append_start_pointer));
         append_start_pointer = total_sequence_bytes - 1;
       }
   }
@@ -41,13 +41,11 @@ void training_data_handler(int8_t* packet_data, uint8_t data_len, int16_t** trai
   }
 
   total_packets_received++;
-  if ((sequence_nr % 5) == 0){
-    uint8_t ack_buffer[] = {previous_sequence_nr};
-    send_data(ack_buffer, 1, ACK, 0); 
-  }
+  uint8_t ack_buffer[] = {previous_sequence_nr};
+  send_data(ack_buffer, 1, ACK, 0); 
 }
 
-void convert_int8_t_array_to_int16_t_array(int8_t* input_array, uint8_t input_len, int16_t* output_array){
+void convert_uint8_t_array_to_int16_t_array(uint8_t* input_array, uint8_t input_len, int16_t* output_array){
   uint8_t num_pairs = input_len / 2;  // We have pairs of int8_t that form one int16_t
 
   for (uint8_t i = 0; i < num_pairs; i++){

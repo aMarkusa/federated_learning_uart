@@ -18,9 +18,12 @@ class UartProtocol():
         match data_type:
             case DataType.LOCAL_PARAMETERS:
                 parsed_data = struct.unpack(">hhh", raw_data)
-                return list(parsed_data)
+            case DataType.ACK:
+                parsed_data = struct.unpack(">B", raw_data)
             case _:
                 pass
+            
+        return list(parsed_data)
       
     def construct_uart_packet(self, data_type: DataType, data: list, sequence):
         data_points_num = len(data)
