@@ -42,9 +42,16 @@ enum States {
     TRAINING_DONE,
 };
 
-struct state_machine {
+struct StateMachine {
     enum States state;
     enum States prev_state;
+};
+
+struct TrainingData {
+    int16_t* x_values;
+    int16_t* y_values;
+    uint16_t x_len;
+    uint16_t y_len;
 };
 
 void read_and_handle_uart_packet(uint8_t* header);
