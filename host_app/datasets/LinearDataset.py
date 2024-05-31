@@ -11,7 +11,7 @@ script_path = str(Path(__file__).resolve().parent)
 # TODO: create validation set
 
 class LinearDataset():
-    def __init__(self, num_points: int, slope, intercept, value_range = 50, min_points_per_dataset=100, output_filename: str = 'dataset'):
+    def __init__(self, num_points: int, slope, intercept, value_range = 50, min_points_per_dataset=100, output_filename: str = 'linear_dataset'):
         self._num_points = num_points
         self._slope = slope
         self._intercept = intercept

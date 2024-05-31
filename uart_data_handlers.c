@@ -12,6 +12,14 @@ uint16_t training_data_handler(uint8_t *packet_data, uint8_t data_len, int16_t *
     static uint8_t consecutive_lost_packets = 0;
     static uint16_t append_start_index = 0;
     int16_t *tmp = NULL;
+    if (last_received_sequence_nr == 255) {
+        // This means we have received a new sequence so we will reset all the static values
+        last_received_sequence_nr = 0;
+        total_sequence_bytes = 0;
+        total_packets_received = 0;
+        consecutive_lost_packets = 0;
+        append_start_index = 0;
+    }
 
     if (sequence_nr == (last_received_sequence_nr + 1)) {
         total_sequence_bytes += data_len;
@@ -28,7 +36,7 @@ uint16_t training_data_handler(uint8_t *packet_data, uint8_t data_len, int16_t *
         consecutive_lost_packets = 0;
     }
     else if (sequence_nr == 255) {
-		total_sequence_bytes += data_len;
+        total_sequence_bytes += data_len;
         if (consecutive_lost_packets == 0) {
             last_received_sequence_nr = sequence_nr;
             tmp = realloc(*training_data_array, total_sequence_bytes);
@@ -50,7 +58,7 @@ uint16_t training_data_handler(uint8_t *packet_data, uint8_t data_len, int16_t *
     uint8_t ack_buffer[] = {last_received_sequence_nr};
     send_data(ack_buffer, 1, ACK, 0);
 
-	return (total_sequence_bytes / 2);
+    return (total_sequence_bytes / 2);
 }
 
 void convert_uint8_t_array_to_int16_t_array(uint8_t *input_array, uint8_t input_len, int16_t *output_array)

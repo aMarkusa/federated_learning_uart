@@ -10,6 +10,7 @@ import os
 import numpy as np
 from pathlib import Path
 
+GENERATE_DATASET = False
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
 START_W = 10
@@ -55,7 +56,8 @@ if __name__ == "__main__":
     setup_logger()
     peripherals = [UartPeripheral(initial_training_params=[START_W, START_B], port=port.device) 
                    for port in peripheral_ports]
-    #full_dataset = prepare_datasets(len(peripherals))
+    if GENERATE_DATASET:
+        full_dataset = prepare_datasets(len(peripherals))
     assign_partial_datasets(peripherals)
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()

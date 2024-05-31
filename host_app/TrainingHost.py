@@ -9,13 +9,15 @@ import time
 # TODO: Check for training done
 # TODO: Add sequence send
 
+def logger():
+    return logging.getLogger(__name__)
+
 class TrainingHost():
     def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = [], dataset: LinearDataset = None, max_payload = 250):
         self._max_iterations = max_iterations
         self._training_limit = training_limit
         self._uart_peripherals : list[UartPeripheral] = uart_peripherals
         self._threads : list[Thread] = []
-        self._logger = logging.getLogger(__name__)
         self._protocol = UartProtocol()
         self._dataset = dataset
         self._latest_mse = 0
@@ -23,8 +25,67 @@ class TrainingHost():
         self._concurrent_mse_increases = 0
         self._current_training_iteration = 0
         self._training_done = False
-        self._max_payload_size = 250  # this is in int8_t
+        self._max_payload_size = 250  # this is in byte elements. This mean 250 int8_t and 125 int16_t
+
         
+    def connect_to_uart_peripherals(self):
+        for peripheral in self.uart_peripherals:
+            peripheral.open_serial_connection()
+            
+    def print_peripheral_parameters(self, peripheral: Peripheral):
+        logger().info("Printing peripherals training parameters:")
+        logger().info(f"[{peripheral.port}] -> w: {peripheral.params[0]}, b: {peripheral.params[1]}, lowest mse: {peripheral.lowest_mse}")
+        
+    
+    def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
+        match data_header[0]:
+            case DataType.LOCAL_PARAMETERS.value:
+                peripheral.params = [parsed_data[0] / 100.0, parsed_data[1] / 100.0]
+                peripheral.latest_mse = parsed_data[2] / 100.0
+        
+    
+    def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
+        if peripheral.ready_to_receive:
+            tx_data = [int(peripheral.params[0] * 100), int(peripheral.params[1] * 100)]
+            peripheral.pack_and_write_data(DataType.GLOBAL_PARAMETERS, tx_data, 0)
+            peripheral.ready_to_receive = False
+            time.sleep(0.1)
+        rx_data_header = peripheral.wait_for_data(peripheral.timeout)
+        if len(rx_data_header) > 0:
+            parsed_rx_data = peripheral.read_and_parse_data(rx_data_header)
+            self.data_handler(peripheral, rx_data_header, parsed_rx_data)    
+        else:
+            pass
+        if self.consecutive_mse_increases >= self.training_limit:
+            self._training_done = True
+            #self.consecutive_mse_increases = 0
+            
+        peripheral.current_training_iteration = peripheral.current_training_iteration + 1
+        
+    def train_model(self):  
+        for i in range(self.max_iterations):
+            for peripheral in self.uart_peripherals:
+                if not peripheral.training_done:
+                    thread = Thread(target=self.iterate_model(peripheral))
+                    self._threads.append(thread)          
+            [thread.start() for thread in self._threads]
+            [thread.join() for thread in self._threads]
+            self._threads.clear()
+            self.print_peripheral_parameters()
+            
+            update_global_params(self.uart_peripherals)
+            if all(periph.training_done for periph in self.uart_peripherals):
+                logger().info("Training done!")
+                break
+            
+    def send_out_training_data(self):
+        for peripheral in self.uart_peripherals:
+            x_values = peripheral._x_values
+            y_values = peripheral._y_values
+            max_payload_size = self._max_payload_size / 2
+            send_sequence(x_values, max_payload_size, peripheral)
+            send_sequence(y_values, max_payload_size, peripheral)
+            
     @property
     def max_iterations(self):
         return self._max_iterations
@@ -71,25 +132,35 @@ class TrainingHost():
     @lowest_mse.setter
     def lowest_mse(self, mse):
         self._lowest_mse = mse
+
+def send_sequence(sequence_buffer, max_payload_size, peripheral: Peripheral): 
+    total_len = len(sequence_buffer)
+    remaining_len = total_len
+    sliding_window_start = 0
+    sliding_window_end = max_payload_size
+
+    sequence_nr = 1
+    while remaining_len > 0: 
+        if remaining_len <= max_payload_size:  # TODO: This could be done a bit cleaner  
+            sequence_nr = 255
+            sliding_window_end = total_len
+        payload = sequence_buffer[sliding_window_start: sliding_window_end]
+        peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence_nr)
+        last_received_sequence = peripheral.wait_for_ack()
+        if last_received_sequence != sequence_nr:
+            remaining_len = total_len - last_received_sequence * max_payload_size
+            sequence_nr = last_received_sequence
+        else:
+            remaining_len = remaining_len - len(payload)
+            if sequence_nr == 255:
+                break
         
-    def connect_to_uart_peripherals(self):
-        for peripheral in self.uart_peripherals:
-            peripheral.open_serial_connection()
-            
-    def print_peripheral_parameters(self):
-        self._logger.info("Printing peripherals training parameters:")
-        for peripheral in self.uart_peripherals:
-            self._logger.info(f"[{peripheral.port}] -> w: {peripheral.params[0]}, b: {peripheral.params[1]}, lowest mse: {peripheral.lowest_mse}")
-        
+        sliding_window_start = sequence_nr * max_payload_size    
+        sliding_window_end = sliding_window_start + max_payload_size
+        sequence_nr = sequence_nr + 1
+        #time.sleep(0.1)
     
-    def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
-        match data_header[0]:
-            case DataType.LOCAL_PARAMETERS.value:
-                peripheral.params = [parsed_data[0] / 100.0, parsed_data[1] / 100.0]
-                peripheral.latest_mse = parsed_data[2] / 100.0
-                
-                
-    def update_global_params(self, peripherals:list[UartPeripheral]):
+def update_global_params(self, peripherals:list[UartPeripheral]):
         w_numerator = float(sum([peripheral.params[0]*peripheral.dataset_len for peripheral in peripherals]))
         b_numerator = float(sum([peripheral.params[1]*peripheral.dataset_len for peripheral in peripherals]))
         denominator = float(sum([peripheral.dataset_len for peripheral in peripherals]))
@@ -99,78 +170,9 @@ class TrainingHost():
         
         self.latest_mse = self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg)
         
-        self._logger.info(f"Training iteration {self.current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
+        logger().info(f"Training iteration {self.current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
         
         for peripheral in peripherals:
             peripheral.params = [w_weighted_avg, b_weighted_avg]
             peripheral.ready_to_receive = True
-        
-    
-    def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
-        if peripheral.ready_to_receive:
-            tx_data = [int(peripheral.params[0] * 100), int(peripheral.params[1] * 100)]
-            peripheral.pack_and_write_data(DataType.GLOBAL_PARAMETERS, tx_data, 0)
-            peripheral.ready_to_receive = False
-            time.sleep(0.1)
-        rx_data_header = peripheral.wait_for_data(peripheral.timeout)
-        if len(rx_data_header) > 0:
-            parsed_rx_data = peripheral.read_and_parse_data(rx_data_header)
-            self.data_handler(peripheral, rx_data_header, parsed_rx_data)    
-        else:
-            pass
-        if self.consecutive_mse_increases >= self.training_limit:
-            self._training_done = True
-            #self.consecutive_mse_increases = 0
             
-        peripheral.current_training_iteration = peripheral.current_training_iteration + 1
-        
-    def train_model(self):  
-        for i in range(self.max_iterations):
-            for peripheral in self.uart_peripherals:
-                if not peripheral.training_done:
-                    thread = Thread(target=self.iterate_model(peripheral))
-                    self._threads.append(thread)          
-            [thread.start() for thread in self._threads]
-            [thread.join() for thread in self._threads]
-            self._threads.clear()
-            self.print_peripheral_parameters()
-            
-            self.update_global_params(self.uart_peripherals)
-            if all(periph.training_done for periph in self.uart_peripherals):
-                self._logger.info("Training done!")
-                break
-            
-    def send_out_training_data(self):
-        for peripheral in self.uart_peripherals:
-            x_values = peripheral.x_values
-            y_values = peripheral.y_values
-            max_payload_size = int(self._max_payload_size / 2) # The data is in int16_t but must be sent as int8_t
-            
-            total_len = len(x_values)
-            remaining_len = total_len
-            sliding_window_start = 0
-            sliding_window_end = max_payload_size
-            
-            sequence_nr = 1
-            while remaining_len > 0: 
-                if remaining_len <= max_payload_size:          
-                    sequence_nr = 255
-                    sliding_window_end = total_len
-                payload = x_values[sliding_window_start: sliding_window_end]
-                peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence_nr)
-                last_received_sequence = peripheral.wait_for_ack()
-                if last_received_sequence != sequence_nr:
-                    remaining_len = total_len - last_received_sequence * max_payload_size
-                    sequence_nr = last_received_sequence
-                else:
-                    remaining_len = remaining_len - len(payload)
-                    if sequence_nr == 255:
-                        break
-                
-                sliding_window_start = sequence_nr * max_payload_size    
-                sliding_window_end = sliding_window_start + max_payload_size
-                sequence_nr = sequence_nr + 1
-                #time.sleep(0.1)
-
-            
-          
