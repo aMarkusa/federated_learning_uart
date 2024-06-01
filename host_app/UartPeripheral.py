@@ -37,6 +37,8 @@ class UartPeripheral(Peripheral):
             self._connection.write(data)
         except Exception as e:
             logger().error(e)
+        
+        return self.wait_for_ack()
 
     def wait_for_data(self, timeout) -> list: 
         self._connection.timeout = timeout

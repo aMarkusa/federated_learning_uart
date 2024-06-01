@@ -1,20 +1,20 @@
 /***************************************************************************/ /**
-                                                                               * @file
-                                                                               * @brief iostream usart examples functions
-                                                                               *******************************************************************************
-                                                                               * # License
-                                                                               * <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
-                                                                               *******************************************************************************
-                                                                               *
-                                                                               * The licensor of this software is Silicon Laboratories Inc. Your use of this
-                                                                               * software is governed by the terms of Silicon Labs Master Software License
-                                                                               * Agreement (MSLA) available at
-                                                                               * www.silabs.com/about-us/legal/master-software-license-agreement. This
-                                                                               * software is distributed to you in Source Code format and is governed by the
-                                                                               * sections of the MSLA applicable to Source Code.
-                                                                               *
-                                                                               * TODO: Think about error handling
-                                                                               ******************************************************************************/
+* @file
+* @brief iostream usart examples functions
+*******************************************************************************
+* # License
+* <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
+*******************************************************************************
+*
+* The licensor of this software is Silicon Laboratories Inc. Your use of this
+* software is governed by the terms of Silicon Labs Master Software License
+* Agreement (MSLA) available at
+* www.silabs.com/about-us/legal/master-software-license-agreement. This
+* software is distributed to you in Source Code format and is governed by the
+* sections of the MSLA applicable to Source Code.
+*
+* TODO: Think about error handling
+******************************************************************************/
 #include "app_iostream_usart.h"
 #include "app_fl.h"
 #include "em_chip.h"
@@ -44,6 +44,7 @@ float global_lowest_mse = 0;
 float global_best_current_w;
 float gloabl_best_b;
 float lowest_mse;
+bool model_parameters_received = false;
 
 void app_iostream_usart_init(void) {
     sl_iostream_set_default(sl_iostream_vcom_handle);
@@ -63,6 +64,9 @@ void fl_fsm(void) {
     switch (fsm.state) {
         case RECEIVE_DATA:
             app_iostream_usart_process_action();
+            if (training_data.x_len != 0 && training_data.x_len == training_data.y_len && model_parameters_received) {
+                set_new_state(TRAIN_MODEL);
+            }
             break;
         case TRAIN_MODEL:
             // train_model(NUM_SAMPLES, &current_w, &current_b, x_values, y_values, &lowest_mse);
@@ -70,7 +74,7 @@ void fl_fsm(void) {
             break;
         case SEND_DATA:
             float parameters[3] = {current_w, current_b, lowest_mse};
-            send_data((void *)parameters, 3, LOCAL_PARAMETERS, 0);
+            send_data((void *)parameters, 3, LOCAL_MODEL_PARAMETERS, 0);
             set_new_state(RECEIVE_DATA);
             break;
         default:
@@ -84,7 +88,7 @@ void read_and_handle_uart_packet(uint8_t *data_buffer) {
     uint8_t sequence_nr = data_buffer[2];
 
     switch (data_type) {
-        case GLOBAL_PARAMETERS:
+        case GLOBAL_MODEL_PARAMETERS:
             int16_t global_w = 0;
             int16_t global_b = 0;
 
@@ -107,9 +111,6 @@ void read_and_handle_uart_packet(uint8_t *data_buffer) {
             break;
         default:
     }
-	if (training_data.x_len == training_data.y_len) {
-		// consider the training data received
-	}
 }
 
 void app_iostream_usart_process_action(void) {

@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 enum Command {
-    GLOBAL_PARAMETERS,
-    LOCAL_PARAMETERS,
+    GLOBAL_MODEL_PARAMETERS,
+    LOCAL_MODEL_PARAMETERS,
     DATASET_X,
     DATASET_Y,
     ACK,

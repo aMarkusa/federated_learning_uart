@@ -62,7 +62,8 @@ if __name__ == "__main__":
     trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
     trainer.connect_to_uart_peripherals()
     trainer.send_out_training_data()
-    trainer.print_peripheral_parameters()
+    for peripheral in peripherals:
+        trainer.print_peripheral_parameters(peripheral)
     trainer.train_model()
         
        

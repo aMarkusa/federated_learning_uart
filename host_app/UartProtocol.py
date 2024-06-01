@@ -2,8 +2,8 @@ from enum import Enum
 import struct
 
 class DataType(Enum):
-    GLOBAL_PARAMETERS = 0  # dtype = int16_t
-    LOCAL_PARAMETERS = 1  # dtype = int16_t
+    GLOBAL_MODEL_PARAMETERS = 0  # dtype = int16_t
+    LOCAL_MODEL_PARAMETERS = 1  # dtype = int16_t
     DATASET_X = 2  # dtype = int16_t
     DATASET_Y = 3  # dtype = int16_t
     ACK = 4  # dtype = uint8_t
@@ -16,7 +16,7 @@ class UartProtocol():
     
     def parse_uart_packet(self, raw_data, data_type: DataType) -> list:
         match data_type:
-            case DataType.LOCAL_PARAMETERS:
+            case DataType.LOCAL_MODEL_PARAMETERS:
                 parsed_data = struct.unpack(">hhh", raw_data)
             case DataType.ACK:
                 parsed_data = struct.unpack(">B", raw_data)
@@ -28,7 +28,7 @@ class UartProtocol():
     def construct_uart_packet(self, data_type: DataType, data: list, sequence):
         data_points_num = len(data)
         match data_type:
-            case DataType.GLOBAL_PARAMETERS:
+            case DataType.GLOBAL_MODEL_PARAMETERS:
                 data_len = data_points_num * 2 
                 format = ">BBBhh"
             case DataType.DATASET_X | DataType.DATASET_Y:

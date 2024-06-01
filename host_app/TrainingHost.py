@@ -47,7 +47,7 @@ class TrainingHost():
     def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
         if peripheral.ready_to_receive:
             tx_data = [int(peripheral.params[0] * 100), int(peripheral.params[1] * 100)]
-            peripheral.pack_and_write_data(DataType.GLOBAL_PARAMETERS, tx_data, 0)
+            peripheral.pack_and_write_data(DataType.GLOBAL_MODEL_PARAMETERS, tx_data, 0)
             peripheral.ready_to_receive = False
             time.sleep(0.1)
         rx_data_header = peripheral.wait_for_data(peripheral.timeout)
@@ -82,9 +82,9 @@ class TrainingHost():
         for peripheral in self.uart_peripherals:
             x_values = peripheral._x_values
             y_values = peripheral._y_values
-            max_payload_size = self._max_payload_size / 2
-            send_sequence(x_values, max_payload_size, peripheral)
-            send_sequence(y_values, max_payload_size, peripheral)
+            max_payload_size = int(self._max_payload_size / 2)
+            send_sequence(DataType.DATASET_X, x_values, max_payload_size, peripheral)
+            send_sequence(DataType.DATASET_Y, y_values, max_payload_size, peripheral)
             
     @property
     def max_iterations(self):
@@ -133,7 +133,7 @@ class TrainingHost():
     def lowest_mse(self, mse):
         self._lowest_mse = mse
 
-def send_sequence(sequence_buffer, max_payload_size, peripheral: Peripheral): 
+def send_sequence(datatype: DataType, sequence_buffer, max_payload_size: int, peripheral: Peripheral): 
     total_len = len(sequence_buffer)
     remaining_len = total_len
     sliding_window_start = 0
@@ -145,8 +145,7 @@ def send_sequence(sequence_buffer, max_payload_size, peripheral: Peripheral):
             sequence_nr = 255
             sliding_window_end = total_len
         payload = sequence_buffer[sliding_window_start: sliding_window_end]
-        peripheral.pack_and_write_data(DataType.DATASET_X, payload, sequence_nr)
-        last_received_sequence = peripheral.wait_for_ack()
+        last_received_sequence = peripheral.pack_and_write_data(datatype, payload, sequence_nr)
         if last_received_sequence != sequence_nr:
             remaining_len = total_len - last_received_sequence * max_payload_size
             sequence_nr = last_received_sequence
