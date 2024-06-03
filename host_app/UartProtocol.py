@@ -18,6 +18,7 @@ class UartProtocol():
         match data_type:
             case DataType.LOCAL_MODEL_PARAMETERS:
                 parsed_data = struct.unpack(">hhh", raw_data)
+                parsed_data = [element_value / 100 for element_value in parsed_data]
             case DataType.ACK:
                 parsed_data = struct.unpack(">B", raw_data)
             case _:
@@ -30,6 +31,7 @@ class UartProtocol():
         match data_type:
             case DataType.GLOBAL_MODEL_PARAMETERS:
                 data_len = data_points_num * 2 
+                data = [int(element_value * 100) for element_value in data]
                 format = ">BBBhh"
             case DataType.DATASET_X | DataType.DATASET_Y:
                 data_len = data_points_num * 2

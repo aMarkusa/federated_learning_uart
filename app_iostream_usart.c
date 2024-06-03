@@ -64,12 +64,12 @@ void fl_fsm(void) {
     switch (fsm.state) {
         case RECEIVE_DATA:
             app_iostream_usart_process_action();
-            if (training_data.x_len != 0 && training_data.x_len == training_data.y_len && model_parameters_received) {
+            if (training_data.x_values != NULL && training_data.x_len == training_data.y_len && model_parameters_received) {
                 set_new_state(TRAIN_MODEL);
             }
             break;
         case TRAIN_MODEL:
-            // train_model(NUM_SAMPLES, &current_w, &current_b, x_values, y_values, &lowest_mse);
+            lowest_mse = train_model(NUM_SAMPLES, &current_w, &current_b, training_data.x_values, training_data.y_values);
             set_new_state(SEND_DATA);
             break;
         case SEND_DATA:
@@ -89,19 +89,19 @@ void read_and_handle_uart_packet(uint8_t *data_buffer) {
 
     switch (data_type) {
         case GLOBAL_MODEL_PARAMETERS:
+        // TODO: Create a handler for this
             int16_t global_w = 0;
             int16_t global_b = 0;
 
-            global_w = (global_w & data_buffer[0]) << 8;
-            global_w = global_w & data_buffer[1];
-
-            global_b = (global_b & data_buffer[2]) << 8;
-            global_b = global_b & data_buffer[3];
+            global_w = ((int16_t)data_buffer[3] << 8) | data_buffer[4];
+            global_b = ((int16_t)data_buffer[5] << 8) | data_buffer[6];
 
             current_w = global_w / 100;
             current_b = global_b / 100;
 
-            set_new_state(TRAIN_MODEL);
+            uint8_t ack_buffer[] = {0};
+            send_data(ack_buffer, 1, ACK, 0);
+            model_parameters_received = true;
             break;
         case DATASET_X:
             training_data.x_len = training_data_handler(data_buffer, data_len, &training_data.x_values, sequence_nr);
@@ -144,7 +144,7 @@ void app_iostream_usart_process_action(void) {
 
 void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t sequence) {
     switch (datatype) {
-        case LOCAL_PARAMETERS: {
+        case LOCAL_MODEL_PARAMETERS: {
             float *buffer = (float *)data_buffer;
             int16_t trained_w = buffer[0] * 100; // Two decimals
             int16_t trained_b = buffer[1] * 100;
@@ -162,7 +162,7 @@ void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t se
             break;
         }
         case ACK: {
-            int8_t tx_buffer[] = {datatype, len, sequence, *(int8_t *)data_buffer};
+            int8_t tx_buffer[] = {datatype, len, sequence, *(int8_t*)data_buffer};
             sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer) / sizeof(uint8_t));
         }
         default:

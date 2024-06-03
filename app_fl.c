@@ -16,7 +16,7 @@ float mean_squared_error(uint16_t* num_samples, float *w1, float *b, float* inpu
 }
 
 // Function to update parameters using gradient descent
-void gradient_descent(uint16_t* num_samples, float *w1, float *b, float* inputs, float* targets) {
+void gradient_descent(uint16_t* num_samples, float *w1, float *b, int16_t* inputs, int16_t* targets) {
     float w1_gradient = 0, b_gradient = 0;
     for (int i = 0; i < *num_samples; i++) {
         float prediction = *w1 * inputs[i] + *b;

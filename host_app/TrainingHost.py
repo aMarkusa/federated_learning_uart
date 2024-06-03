@@ -46,7 +46,7 @@ class TrainingHost():
     
     def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
         if peripheral.ready_to_receive:
-            tx_data = [int(peripheral.params[0] * 100), int(peripheral.params[1] * 100)]
+            tx_data = [peripheral.params[0], peripheral.params[1]]
             peripheral.pack_and_write_data(DataType.GLOBAL_MODEL_PARAMETERS, tx_data, 0)
             peripheral.ready_to_receive = False
             time.sleep(0.1)
