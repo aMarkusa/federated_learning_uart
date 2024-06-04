@@ -39,7 +39,7 @@ class TrainingHost():
     
     def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
         match data_header[0]:
-            case DataType.LOCAL_PARAMETERS.value:
+            case DataType.LOCAL_MODEL_PARAMETERS.value:
                 peripheral.params = [parsed_data[0] / 100.0, parsed_data[1] / 100.0]
                 peripheral.latest_mse = parsed_data[2] / 100.0
         
@@ -56,9 +56,7 @@ class TrainingHost():
             self.data_handler(peripheral, rx_data_header, parsed_rx_data)    
         else:
             pass
-        if self.consecutive_mse_increases >= self.training_limit:
-            self._training_done = True
-            #self.consecutive_mse_increases = 0
+    
             
         peripheral.current_training_iteration = peripheral.current_training_iteration + 1
         

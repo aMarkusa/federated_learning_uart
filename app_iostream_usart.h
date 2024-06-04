@@ -22,9 +22,6 @@
 #ifndef BUFSIZE
 #define BUFSIZE 80
 #endif
-#ifndef NUM_SAMPLES
-#define NUM_SAMPLES 200
-#endif
 #ifndef PACKET_HEADER_SIZE
 #define PACKET_HEADER_SIZE 3
 #endif

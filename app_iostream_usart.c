@@ -69,12 +69,13 @@ void fl_fsm(void) {
             }
             break;
         case TRAIN_MODEL:
-            lowest_mse = train_model(NUM_SAMPLES, &current_w, &current_b, training_data.x_values, training_data.y_values);
+            lowest_mse = train_model(training_data.x_len, &current_w, &current_b, training_data.x_values, training_data.y_values, &lowest_mse);
             set_new_state(SEND_DATA);
             break;
         case SEND_DATA:
             float parameters[3] = {current_w, current_b, lowest_mse};
             send_data((void *)parameters, 3, LOCAL_MODEL_PARAMETERS, 0);
+            model_parameters_received = false;
             set_new_state(RECEIVE_DATA);
             break;
         default:

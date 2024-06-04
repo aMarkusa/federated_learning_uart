@@ -3,10 +3,11 @@
 
 #define LEARNING_RATE 0.0001
 #define MAX_ITERATIONS 10000
+#define TRAINING_LIMIT 3
 
 
 // Function to calculate the mean squared error
-float mean_squared_error(uint16_t* num_samples, float *w1, float *b, float* inputs, float* targets) {
+float mean_squared_error(uint16_t* num_samples, float *w1, float *b, int16_t* inputs, int16_t* targets) {
     float error = 0;
     for (int i = 0; i < *num_samples; i++) {
         float prediction = *w1 * inputs[i] + *b;
@@ -45,7 +46,7 @@ int train_model(uint16_t num_samples, float* w1, float* b, int16_t* inputs, int1
         }
         else {
             consecutive_increases++;
-            if (consecutive_increases >= 3){
+            if (consecutive_increases >= TRAINING_LIMIT){
                 *w1 = best_w1;
                 *b = best_b;
                 break;
