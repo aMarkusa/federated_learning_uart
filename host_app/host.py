@@ -10,7 +10,7 @@ import os
 import numpy as np
 from pathlib import Path
 
-GENERATE_DATASET = False
+GENERATE_DATASET = True
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
 START_W = 10
@@ -37,7 +37,7 @@ def prepare_datasets(number_of_peripherals):
 def assign_partial_datasets(peripherals: list[UartPeripheral]):
     peripheral_index = 0
     for file in os.listdir(script_path + '/' + "datasets"):
-        if file.endswith('.csv'):
+        if file.endswith('.csv') and "total" not in file:
             file_path = script_path + '/' + "datasets" + '/' + file
             data = np.genfromtxt(file_path, delimiter=',',dtype=int, skip_header=True)
             x_values = data[0:, 0].tolist() 
@@ -47,6 +47,17 @@ def assign_partial_datasets(peripherals: list[UartPeripheral]):
             peripherals[peripheral_index].y_values = y_values
             
             peripheral_index = peripheral_index + 1
+            
+def get_total_dataset():
+    for file in os.listdir(script_path + '/' + "datasets"):
+        if "total_linear_dataset" in file:
+            file_path = script_path + '/' + "datasets" + '/' + file
+            data = np.genfromtxt(file_path, delimiter=',',dtype=int, skip_header=True)
+            x_values = data[0:, 0].tolist() 
+            y_values = data[0:, 1].tolist()
+            
+            
+    
 
    
 
@@ -59,7 +70,7 @@ if __name__ == "__main__":
     if GENERATE_DATASET:
         full_dataset = prepare_datasets(len(peripherals))
     assign_partial_datasets(peripherals)
-    trainer = TrainingHost(uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS)
+    trainer = TrainingHost(starting_parameters= [START_W, START_B], uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS, dataset=full_dataset)
     trainer.connect_to_uart_peripherals()
     trainer.send_out_training_data()
     for peripheral in peripherals:

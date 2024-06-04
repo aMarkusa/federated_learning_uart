@@ -13,16 +13,18 @@ def logger():
     return logging.getLogger(__name__)
 
 class TrainingHost():
-    def __init__(self, max_iterations = 100, training_limit = 3, uart_peripherals = [], dataset: LinearDataset = None, max_payload = 250):
+    def __init__(self, starting_parameters, max_iterations = 100, training_limit = 2, uart_peripherals = [], dataset: LinearDataset = None, max_payload = 250):
         self._max_iterations = max_iterations
         self._training_limit = training_limit
         self._uart_peripherals : list[UartPeripheral] = uart_peripherals
         self._threads : list[Thread] = []
         self._protocol = UartProtocol()
         self._dataset = dataset
+        self._global_parameters = starting_parameters
+        self._best_global_parameters = []
         self._latest_mse = 0
         self._lowest_mse = 0
-        self._concurrent_mse_increases = 0
+        self._consecutive_mse_increases = 0
         self._current_training_iteration = 0
         self._training_done = False
         self._max_payload_size = 250  # this is in byte elements. This mean 250 int8_t and 125 int16_t
@@ -40,8 +42,8 @@ class TrainingHost():
     def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
         match data_header[0]:
             case DataType.LOCAL_MODEL_PARAMETERS.value:
-                peripheral.params = [parsed_data[0] / 100.0, parsed_data[1] / 100.0]
-                peripheral.latest_mse = parsed_data[2] / 100.0
+                peripheral.params = [parsed_data[0], parsed_data[1]]
+                peripheral.latest_mse = parsed_data[2]
         
     
     def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
@@ -69,13 +71,36 @@ class TrainingHost():
             [thread.start() for thread in self._threads]
             [thread.join() for thread in self._threads]
             self._threads.clear()
-            self.print_peripheral_parameters()
+            for peripheral in self.uart_peripherals:
+                self.print_peripheral_parameters(peripheral)
             
-            update_global_params(self.uart_peripherals)
-            if all(periph.training_done for periph in self.uart_peripherals):
-                logger().info("Training done!")
+            self.update_global_params(self.uart_peripherals)
+            if self._training_done == True:
                 break
-            
+            else:
+                self._current_training_iteration = self._current_training_iteration + 1
+    
+    def update_global_params(self, peripherals:list[UartPeripheral]):
+        w_numerator = float(sum([peripheral.params[0]*peripheral.dataset_len for peripheral in peripherals]))
+        b_numerator = float(sum([peripheral.params[1]*peripheral.dataset_len for peripheral in peripherals]))
+        denominator = float(sum([peripheral.dataset_len for peripheral in peripherals]))
+         
+        w_weighted_avg = w_numerator / denominator
+        b_weighted_avg = b_numerator / denominator
+        
+        self.latest_mse = round(self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg), 2)
+        
+        logger().info(f"Training iteration {self._current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
+        
+        if self._consecutive_mse_increases >= self.training_limit:
+            logger().info("Training done")
+            self._training_done = True
+        else:
+            for peripheral in peripherals:
+                peripheral.params = [w_weighted_avg, b_weighted_avg]
+                peripheral._ready_to_receive = True
+
+   
     def send_out_training_data(self):
         for peripheral in self.uart_peripherals:
             x_values = peripheral._x_values
@@ -110,18 +135,18 @@ class TrainingHost():
         
     @property
     def latest_mse(self):
-        return self._current_mse
+        return self._latest_mse
     
     @latest_mse.setter
     def latest_mse(self, mse):
         self._latest_mse = mse
-        if self.current_training_iteration == 0:
+        if self._current_training_iteration == 0:
             self.lowest_mse = mse
         elif mse < self.lowest_mse:
             self.lowest_mse = mse
-            self.consecutive_mse_increases = 0
+            self._consecutive_mse_increases = 0
         else:
-            self.consecutive_mse_increases = self.consecutive_mse_increases + 1
+            self._consecutive_mse_increases = self._consecutive_mse_increases + 1
         
     @property
     def lowest_mse(self):
@@ -157,19 +182,6 @@ def send_sequence(datatype: DataType, sequence_buffer, max_payload_size: int, pe
         sequence_nr = sequence_nr + 1
         #time.sleep(0.1)
     
-def update_global_params(self, peripherals:list[UartPeripheral]):
-        w_numerator = float(sum([peripheral.params[0]*peripheral.dataset_len for peripheral in peripherals]))
-        b_numerator = float(sum([peripheral.params[1]*peripheral.dataset_len for peripheral in peripherals]))
-        denominator = float(sum([peripheral.dataset_len for peripheral in peripherals]))
-         
-        w_weighted_avg = w_numerator / denominator
-        b_weighted_avg = b_numerator / denominator
+
         
-        self.latest_mse = self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg)
-        
-        logger().info(f"Training iteration {self.current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
-        
-        for peripheral in peripherals:
-            peripheral.params = [w_weighted_avg, b_weighted_avg]
-            peripheral.ready_to_receive = True
             

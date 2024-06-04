@@ -25,7 +25,12 @@ class LinearDataset():
     def generate_dataset(self):
         self._x_values = np.random.randint(low=-100, high=100, size=self._num_points)
         self._y_values = self._slope * self._x_values + self._intercept + np.random.randint(low=-(self._value_range), high=self._value_range, size=self._num_points)
-        self.plot_dataset(self._x_values, self._y_values, 'full_dataset')
+
+        df = pd.DataFrame({'X': self._x_values, 'Y': self._y_values})
+        df.to_csv(script_path + '/' + "total_linear_dataset" + ".csv", index=False)
+
+        self.plot_dataset(self._x_values, self._y_values, 'total_linear_dataset')
+        
         
     
     def divide_and_save_datasets(self, divisor, filename = 'linear_dataset'):
@@ -60,6 +65,6 @@ class LinearDataset():
         
     def validate_parameters(self, weight, intercept):
         predictions = self._x_values * weight + intercept
-        mse = np.sqrt(np.mean(np.square(self._x_values - predictions)))
+        mse = np.sqrt(np.mean(np.square(self._y_values - predictions)))
         
         return mse

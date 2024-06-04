@@ -49,6 +49,9 @@ int train_model(uint16_t num_samples, float* w1, float* b, int16_t* inputs, int1
             if (consecutive_increases >= TRAINING_LIMIT){
                 *w1 = best_w1;
                 *b = best_b;
+                mse = mean_squared_error(&num_samples, &best_w1, &best_b, inputs, targets);
+                mse++;
+                mse--;
                 break;
             }
         }
