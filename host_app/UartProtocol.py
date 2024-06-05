@@ -17,7 +17,7 @@ class UartProtocol():
     def parse_uart_packet(self, raw_data, data_type: DataType) -> list:
         match data_type:
             case DataType.LOCAL_MODEL_PARAMETERS:
-                parsed_data = struct.unpack(">hhh", raw_data)
+                parsed_data = struct.unpack(">hhH", raw_data)
                 parsed_data = [element_value / 100 for element_value in parsed_data]
             case DataType.ACK:
                 parsed_data = struct.unpack(">B", raw_data)

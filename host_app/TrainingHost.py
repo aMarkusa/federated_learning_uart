@@ -6,8 +6,6 @@ from threading import Thread
 from datasets.LinearDataset import LinearDataset
 import time
 
-# TODO: Check for training done
-# TODO: Add sequence send
 
 def logger():
     return logging.getLogger(__name__)
@@ -22,9 +20,9 @@ class TrainingHost():
         self._dataset = dataset
         self._global_parameters = starting_parameters
         self._best_global_parameters = []
-        self._latest_mse = 0
-        self._lowest_mse = 0
-        self._consecutive_mse_increases = 0
+        self._latest_rmse = 0
+        self._lowest_rmse = 0
+        self._consecutive_rmse_increases = 0
         self._current_training_iteration = 0
         self._training_done = False
         self._max_payload_size = 250  # this is in byte elements. This mean 250 int8_t and 125 int16_t
@@ -36,14 +34,14 @@ class TrainingHost():
             
     def print_peripheral_parameters(self, peripheral: Peripheral):
         logger().info("Printing peripherals training parameters:")
-        logger().info(f"[{peripheral.port}] -> w: {peripheral.params[0]}, b: {peripheral.params[1]}, lowest mse: {peripheral.lowest_mse}")
+        logger().info(f"[{peripheral.port}] -> w: {peripheral.params[0]}, b: {peripheral.params[1]}, lowest rmse: {peripheral.lowest_rmse}")
         
     
     def data_handler(self, peripheral: UartPeripheral, data_header: list, parsed_data:list):
         match data_header[0]:
             case DataType.LOCAL_MODEL_PARAMETERS.value:
                 peripheral.params = [parsed_data[0], parsed_data[1]]
-                peripheral.latest_mse = parsed_data[2]
+                peripheral.latest_rmse = round(parsed_data[2], 1)
         
     
     def iterate_model(self, peripheral: UartPeripheral):  # This is run in a thread
@@ -87,17 +85,18 @@ class TrainingHost():
          
         w_weighted_avg = w_numerator / denominator
         b_weighted_avg = b_numerator / denominator
+        self._global_parameters = [w_weighted_avg, b_weighted_avg]
+        self.latest_rmse = round(self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg), 1)
         
-        self.latest_mse = round(self._dataset.validate_parameters(w_weighted_avg, b_weighted_avg), 2)
+        logger().info(f"Training iteration {self._current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, rmse: {self.latest_rmse}")
         
-        logger().info(f"Training iteration {self._current_training_iteration} resulted in -> w: {w_weighted_avg}, b: {b_weighted_avg}, mse: {self.latest_mse}")
-        
-        if self._consecutive_mse_increases >= self.training_limit:
-            logger().info("Training done")
+        if self._consecutive_rmse_increases >= self.training_limit:
+            logger().info(f"RMSE not improved for {self._training_limit} iterations.")
+            logger().info(f"Training completed. Final values -> w: {self._best_global_parameters[0]}, b: {self._best_global_parameters[1]}, rmse: {self.lowest_rmse}")
             self._training_done = True
         else:
             for peripheral in peripherals:
-                peripheral.params = [w_weighted_avg, b_weighted_avg]
+                peripheral.params = self._global_parameters
                 peripheral._ready_to_receive = True
 
    
@@ -134,27 +133,29 @@ class TrainingHost():
         self._uart_peripherals = peripherals
         
     @property
-    def latest_mse(self):
-        return self._latest_mse
+    def latest_rmse(self):
+        return self._latest_rmse
     
-    @latest_mse.setter
-    def latest_mse(self, mse):
-        self._latest_mse = mse
+    @latest_rmse.setter
+    def latest_rmse(self, rmse):
+        self._latest_rmse = rmse
         if self._current_training_iteration == 0:
-            self.lowest_mse = mse
-        elif mse < self.lowest_mse:
-            self.lowest_mse = mse
-            self._consecutive_mse_increases = 0
+            self.lowest_rmse = rmse
+            self._best_global_parameters = self._global_parameters
+        elif rmse < self.lowest_rmse:
+            self.lowest_rmse = rmse
+            self._best_global_parameters = self._global_parameters
+            self._consecutive_rmse_increases = 0
         else:
-            self._consecutive_mse_increases = self._consecutive_mse_increases + 1
+            self._consecutive_rmse_increases = self._consecutive_rmse_increases + 1
         
     @property
-    def lowest_mse(self):
-        return self._lowest_mse
+    def lowest_rmse(self):
+        return self._lowest_rmse
     
-    @lowest_mse.setter
-    def lowest_mse(self, mse):
-        self._lowest_mse = mse
+    @lowest_rmse.setter
+    def lowest_rmse(self, rmse):
+        self._lowest_rmse = rmse
 
 def send_sequence(datatype: DataType, sequence_buffer, max_payload_size: int, peripheral: Peripheral): 
     total_len = len(sequence_buffer)

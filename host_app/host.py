@@ -13,8 +13,8 @@ from pathlib import Path
 GENERATE_DATASET = True
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
-START_W = 10
-START_B = 5
+START_W = -2.6
+START_B = 1
 START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
@@ -29,7 +29,7 @@ def setup_logger():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=format)
     
 def prepare_datasets(number_of_peripherals):
-    dataset = LinearDataset(920, -1, 0)
+    dataset = LinearDataset(2000, -1, 0)
     dataset.divide_and_save_datasets(number_of_peripherals)
     
     return dataset

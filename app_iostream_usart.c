@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 /*******************************************************************************
  *******************************   DEFINES   ***********************************
@@ -97,8 +98,8 @@ void read_and_handle_uart_packet(uint8_t *data_buffer) {
             global_w = ((int16_t)data_buffer[3] << 8) | data_buffer[4];
             global_b = ((int16_t)data_buffer[5] << 8) | data_buffer[6];
 
-            current_w = global_w / 100;
-            current_b = global_b / 100;
+            current_w = global_w / 100.0;
+            current_b = global_b / 100.0;
 
             uint8_t ack_buffer[] = {0};
             send_data(ack_buffer, 1, ACK, 0);
@@ -149,21 +150,21 @@ void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t se
             float *buffer = (float *)data_buffer;
             int16_t trained_w = buffer[0] * 100; // Two decimals
             int16_t trained_b = buffer[1] * 100;
-            int16_t lowest_mse_int = lowest_mse * 100;
+            uint16_t lowest_rmse = sqrt(lowest_mse) * 100;
 
             int8_t w_lsb = trained_w & 0xFF;
             int8_t w_msb = (trained_w >> 8) & 0xFF;
             int8_t b_lsb = trained_b & 0xFF;
             int8_t b_msb = (trained_b >> 8) & 0xFF;
-            int8_t lowest_mse_lsb = lowest_mse_int & 0xFF;
-            int8_t lowest_mse_msb = (lowest_mse_int >> 8) & 0xFF;
+            int8_t lowest_mse_lsb = lowest_rmse & 0xFF;
+            int8_t lowest_mse_msb = (lowest_rmse >> 8) & 0xFF;
 
             int8_t tx_buffer[] = {datatype, len * 2, sequence, w_msb, w_lsb, b_msb, b_lsb, lowest_mse_msb, lowest_mse_lsb};
-            sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer) / sizeof(uint8_t));
+            sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer) / sizeof(int8_t));
             break;
         }
         case ACK: {
-            int8_t tx_buffer[] = {datatype, len, sequence, *(int8_t*)data_buffer};
+            uint8_t tx_buffer[] = {datatype, len, sequence, *(uint8_t*)data_buffer};
             sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer) / sizeof(uint8_t));
         }
         default:

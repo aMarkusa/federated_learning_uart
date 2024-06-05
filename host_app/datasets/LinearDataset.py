@@ -65,6 +65,6 @@ class LinearDataset():
         
     def validate_parameters(self, weight, intercept):
         predictions = self._x_values * weight + intercept
-        mse = np.sqrt(np.mean(np.square(self._y_values - predictions)))
+        rmse = np.sqrt(np.mean(np.square(self._y_values - predictions)))
         
-        return mse
+        return rmse
