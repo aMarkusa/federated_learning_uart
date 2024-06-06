@@ -2,7 +2,7 @@
 from serial.tools import list_ports
 from UartPeripheral import UartPeripheral
 from TrainingHost import TrainingHost
-from datasets.LinearDataset import LinearDataset
+from datasets.LinearDataset import *
 import logging
 from time import sleep
 import sys
@@ -19,8 +19,6 @@ START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
 
-script_path = str(Path(__file__).resolve().parent)
-
 def setup_logger():
     # Create a logger
     os.environ['PYTHONUNBUFFERED'] = '1'
@@ -33,20 +31,6 @@ def prepare_datasets(number_of_peripherals):
     dataset.divide_and_save_datasets(number_of_peripherals)
     
     return dataset
-
-def assign_partial_datasets(peripherals: list[UartPeripheral]):
-    peripheral_index = 0
-    for file in os.listdir(script_path + '/' + "datasets"):
-        if file.endswith('.csv') and "total" not in file:
-            file_path = script_path + '/' + "datasets" + '/' + file
-            data = np.genfromtxt(file_path, delimiter=',',dtype=int, skip_header=True)
-            x_values = data[0:, 0].tolist() 
-            y_values = data[0:, 1].tolist()
-            
-            peripherals[peripheral_index].x_values = x_values
-            peripherals[peripheral_index].y_values = y_values
-            
-            peripheral_index = peripheral_index + 1
             
 def get_total_dataset():
     for file in os.listdir(script_path + '/' + "datasets"):
@@ -72,10 +56,14 @@ if __name__ == "__main__":
     assign_partial_datasets(peripherals)
     trainer = TrainingHost(starting_parameters= [START_W, START_B], uart_peripherals=peripherals, max_iterations=MAX_ITERATIONS, dataset=full_dataset)
     trainer.connect_to_uart_peripherals()
-    trainer.send_out_training_data()
+    #trainer.send_out_training_data()
     for peripheral in peripherals:
         trainer.print_peripheral_parameters(peripheral)
-    trainer.train_model()
+    #trainer.train_model()
+    
+    # model_weight = trainer.best_global_parameters[0]
+    # model_bias = trainer.best_global_parameters[1]
+    create_final_plots(-1, 1, peripherals, full_dataset)
         
        
 

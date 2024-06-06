@@ -108,6 +108,32 @@ class TrainingHost():
             send_sequence(DataType.DATASET_X, x_values, max_payload_size, peripheral)
             send_sequence(DataType.DATASET_Y, y_values, max_payload_size, peripheral)
             
+    def send_sequence(datatype: DataType, sequence_buffer, max_payload_size: int, peripheral: Peripheral): 
+        total_len = len(sequence_buffer)
+        remaining_len = total_len
+        sliding_window_start = 0
+        sliding_window_end = max_payload_size
+
+        sequence_nr = 1
+        while remaining_len > 0: 
+            if remaining_len <= max_payload_size:  # TODO: This could be done a bit cleaner  
+                sequence_nr = 255
+                sliding_window_end = total_len
+            payload = sequence_buffer[sliding_window_start: sliding_window_end]
+            last_received_sequence = peripheral.pack_and_write_data(datatype, payload, sequence_nr)
+            if last_received_sequence != sequence_nr:
+                remaining_len = total_len - last_received_sequence * max_payload_size
+                sequence_nr = last_received_sequence
+            else:
+                remaining_len = remaining_len - len(payload)
+                if sequence_nr == 255:
+                    break
+            
+            sliding_window_start = sequence_nr * max_payload_size    
+            sliding_window_end = sliding_window_start + max_payload_size
+            sequence_nr = sequence_nr + 1
+            #time.sleep(0.1)
+            
     @property
     def max_iterations(self):
         return self._max_iterations
@@ -141,7 +167,7 @@ class TrainingHost():
         self._latest_rmse = rmse
         if self._current_training_iteration == 0:
             self.lowest_rmse = rmse
-            self._best_global_parameters = self._global_parameters
+            self._best_global_parameters = self._global_parameters  # FIXME: Should this be here?
         elif rmse < self.lowest_rmse:
             self.lowest_rmse = rmse
             self._best_global_parameters = self._global_parameters
@@ -157,32 +183,11 @@ class TrainingHost():
     def lowest_rmse(self, rmse):
         self._lowest_rmse = rmse
 
-def send_sequence(datatype: DataType, sequence_buffer, max_payload_size: int, peripheral: Peripheral): 
-    total_len = len(sequence_buffer)
-    remaining_len = total_len
-    sliding_window_start = 0
-    sliding_window_end = max_payload_size
-
-    sequence_nr = 1
-    while remaining_len > 0: 
-        if remaining_len <= max_payload_size:  # TODO: This could be done a bit cleaner  
-            sequence_nr = 255
-            sliding_window_end = total_len
-        payload = sequence_buffer[sliding_window_start: sliding_window_end]
-        last_received_sequence = peripheral.pack_and_write_data(datatype, payload, sequence_nr)
-        if last_received_sequence != sequence_nr:
-            remaining_len = total_len - last_received_sequence * max_payload_size
-            sequence_nr = last_received_sequence
-        else:
-            remaining_len = remaining_len - len(payload)
-            if sequence_nr == 255:
-                break
+    @property
+    def best_global_parameters(self):
+        return self._best_global_parameters
         
-        sliding_window_start = sequence_nr * max_payload_size    
-        sliding_window_end = sliding_window_start + max_payload_size
-        sequence_nr = sequence_nr + 1
-        #time.sleep(0.1)
-    
-
-        
+    @best_global_parameters.setter
+    def best_global_parameters(self, global_parameters: list):
+        self._best_global_parameters = global_parameters
             
