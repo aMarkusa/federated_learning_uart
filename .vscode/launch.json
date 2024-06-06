@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "federated_learning_over_usart_silabs_debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "executable": "${workspaceFolder}/federated_learning_over_usart_cmake/build/default_config/federated_learning_over_usart.out",
+            "serverpath": "/Applications/Simplicity Studio.app/Contents/Eclipse/developer/adapter_packs/exx32/JLinkGDBServer",
+            "servertype": "jlink",
+            "armToolchainPath": "/Applications/Simplicity Studio.app/Contents/Eclipse/developer/toolchains/gnu_arm/12.2.rel1_2023.7/bin",
+            "device": "EFR32MG24BxxxF1536",
+            "svdFile": "",
+            "runToEntryPoint": "main",
+            "serverArgs": [
+                "-select",
+                "usb = 440250566"
+            ],
+            "rtos": "FreeRTOS"
+        }
+    ]
+}
