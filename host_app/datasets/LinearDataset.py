@@ -10,6 +10,7 @@ from UartPeripheral import UartPeripheral
 script_path = str(Path(__file__).resolve().parent)
 
 # TODO: create validation set
+# TODO: Rename X- and Y-Values to inputs and targets
 
 class LinearDataset():
     def __init__(self, num_points: int, slope, intercept, value_range = 50, min_points_per_dataset=100, output_filename: str = 'linear_dataset'):
@@ -78,7 +79,7 @@ def calculate_rmse(weight, bias, inputs, targets):  # TODO: Should only accept n
     predictions = inputs * weight + bias
     rmse = np.sqrt(np.mean(np.square(targets - predictions)))
     
-    return rmse
+    return round(rmse, 2)
     
 def create_final_plots(weight, bias, peripherals: list[UartPeripheral], full_dataset: LinearDataset):
     # max_x_value = full_dataset.x_values.max()
