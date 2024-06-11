@@ -11,9 +11,9 @@ def logger():
 
 class UartPeripheral(Peripheral):
     def __init__(
-        self, port=None, baud_rate=115200, rtscts=True, initial_training_params=[0, 0]
+        self, nickname, port=None, baud_rate=115200, rtscts=True, initial_training_params=[0, 0]
     ):
-        Peripheral.__init__(self, initial_training_params=initial_training_params)
+        Peripheral.__init__(self, initial_training_params=initial_training_params, nickname=nickname)
         self._port = port
         self._baud_rate = baud_rate
         self._rtscts = rtscts

@@ -1,5 +1,6 @@
 class Peripheral:
-    def __init__(self, initial_training_params):
+    def __init__(self, initial_training_params, nickname):
+        self.nickname = nickname
         self._params = initial_training_params
         self._latest_rmse = None
         self._lowest_rmse = None
