@@ -4,13 +4,14 @@ class Peripheral:
         self._params = initial_training_params
         self._latest_rmse = None
         self._lowest_rmse = None
+        self.final_rmse = None
         self._consecutive_rmse_increases = 0
         self._current_training_iteration = 0
         self._ready_to_receive = True
         self._timeout = 60
         self._active_training = False
         self._training_done = False
-        self._dataset_len = 100
+        self._dataset_len = None
         self._x_values = []
         self._y_values = []
 

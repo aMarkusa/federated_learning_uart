@@ -25,10 +25,10 @@ class UartProtocol:
                 parsed_data = struct.unpack(">B", raw_data)
             case _:
                 pass
-        try:        
-            return list(parsed_data)
-        except Exception as e:
-            print("hellooo")
+                
+        return list(parsed_data)
+
+            
 
     def construct_uart_packet(self, data_type: DataType, data: list, sequence):
         data_points_num = len(data)

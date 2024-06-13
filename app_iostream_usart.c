@@ -1,20 +1,20 @@
 /***************************************************************************/ /**
-* @file
-* @brief iostream usart examples functions
-*******************************************************************************
-* # License
-* <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
-*******************************************************************************
-*
-* The licensor of this software is Silicon Laboratories Inc. Your use of this
-* software is governed by the terms of Silicon Labs Master Software License
-* Agreement (MSLA) available at
-* www.silabs.com/about-us/legal/master-software-license-agreement. This
-* software is distributed to you in Source Code format and is governed by the
-* sections of the MSLA applicable to Source Code.
-*
-* TODO: Think about error handling
-******************************************************************************/
+                                                                               * @file
+                                                                               * @brief iostream usart examples functions
+                                                                               *******************************************************************************
+                                                                               * # License
+                                                                               * <b>Copyright 2020 Silicon Laboratories Inc. www.silabs.com</b>
+                                                                               *******************************************************************************
+                                                                               *
+                                                                               * The licensor of this software is Silicon Laboratories Inc. Your use of this
+                                                                               * software is governed by the terms of Silicon Labs Master Software License
+                                                                               * Agreement (MSLA) available at
+                                                                               * www.silabs.com/about-us/legal/master-software-license-agreement. This
+                                                                               * software is distributed to you in Source Code format and is governed by the
+                                                                               * sections of the MSLA applicable to Source Code.
+                                                                               *
+                                                                               * TODO: Think about error handling
+                                                                               ******************************************************************************/
 #include "app_iostream_usart.h"
 #include "app_fl.h"
 #include "em_chip.h"
@@ -26,10 +26,10 @@
 #include "sl_iostream_usart_vcom_config.h"
 #include "sl_sleeptimer.h"
 #include "uart_data_handlers.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 /*******************************************************************************
  *******************************   DEFINES   ***********************************
@@ -47,7 +47,8 @@ float gloabl_best_b;
 float lowest_mse;
 bool model_parameters_received = false;
 
-void app_iostream_usart_init(void) {
+void app_iostream_usart_init(void)
+{
     sl_iostream_set_default(sl_iostream_vcom_handle);
 
     training_data.x_values = NULL;
@@ -56,12 +57,14 @@ void app_iostream_usart_init(void) {
     training_data.y_len = 0;
 }
 
-void set_new_state(enum States new_state) {
+void set_new_state(enum States new_state)
+{
     fsm.prev_state = fsm.state;
     fsm.state = new_state;
 }
 
-void fl_fsm(void) {
+void fl_fsm(void)
+{
     switch (fsm.state) {
         case RECEIVE_DATA:
             app_iostream_usart_process_action();
@@ -76,6 +79,12 @@ void fl_fsm(void) {
         case SEND_DATA:
             float parameters[3] = {current_w, current_b, lowest_mse};
             send_data((void *)parameters, 3, LOCAL_MODEL_PARAMETERS, 0);
+            if (training_data.x_values != NULL) {
+                free(training_data.x_values);
+                free(training_data.y_values);
+                training_data.x_values = NULL;
+                training_data.y_values = NULL;
+            }
             model_parameters_received = false;
             set_new_state(RECEIVE_DATA);
             break;
@@ -84,14 +93,15 @@ void fl_fsm(void) {
     }
 }
 
-void read_and_handle_uart_packet(uint8_t *data_buffer) {
+void read_and_handle_uart_packet(uint8_t *data_buffer)
+{
     enum Command data_type = data_buffer[0];
     uint8_t data_len = data_buffer[1];
     uint8_t sequence_nr = data_buffer[2];
 
     switch (data_type) {
         case GLOBAL_MODEL_PARAMETERS:
-        // TODO: Create a handler for this
+            // TODO: Create a handler for this
             int16_t global_w = 0;
             int16_t global_b = 0;
 
@@ -115,7 +125,8 @@ void read_and_handle_uart_packet(uint8_t *data_buffer) {
     }
 }
 
-void app_iostream_usart_process_action(void) {
+void app_iostream_usart_process_action(void)
+{
     size_t bytes_read = 0;
     static uint8_t total_bytes_read = 0;
     static uint8_t last_byte = 0;
@@ -144,7 +155,8 @@ void app_iostream_usart_process_action(void) {
     }
 }
 
-void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t sequence) {
+void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t sequence)
+{
     switch (datatype) {
         case LOCAL_MODEL_PARAMETERS: {
             float *buffer = (float *)data_buffer;
@@ -164,7 +176,7 @@ void send_data(void *data_buffer, uint8_t len, enum Command datatype, uint8_t se
             break;
         }
         case ACK: {
-            uint8_t tx_buffer[] = {datatype, len, sequence, *(uint8_t*)data_buffer};
+            uint8_t tx_buffer[] = {datatype, len, sequence, *(uint8_t *)data_buffer};
             sl_iostream_write(sl_iostream_vcom_handle, tx_buffer, sizeof(tx_buffer) / sizeof(uint8_t));
         }
         default:

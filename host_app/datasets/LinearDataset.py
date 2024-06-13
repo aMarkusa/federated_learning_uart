@@ -8,6 +8,7 @@ import os
 from UartPeripheral import UartPeripheral
 from uuid import uuid4
 from matplotlib.axes import Axes
+from datetime import datetime
 
 script_path = str(Path(__file__).resolve().parent)
 
@@ -33,7 +34,7 @@ class LinearDataset:
         self._x_values = None
         self._y_values = None
         self._initial_model = None
-        self._uuid = str(uuid4())
+        self._uuid = datetime.now().strftime('%Y%m-%d%H-%M%S-') + str(uuid4())
         self._path = Path(script_path, "datasets", self._uuid)
 
         os.makedirs(Path(self._path, "initial_datasets"))
@@ -54,7 +55,8 @@ class LinearDataset:
         dataset_name = "full_dataset"
         save_dataset(self._x_values, self._y_values, save_path, dataset_name)
         fig, ax = plt.subplots(1, 1)
-        plot = plot_dataset(ax, self._x_values, self._y_values, dataset_name)
+        ax = plot_dataset(ax, self._x_values, self._y_values)
+        fig.suptitle(dataset_name)
         fig.savefig(str(save_path)+ '/' + dataset_name + ".png")
         
     def divide_and_save_datasets(self, divisor, filename="partial_dataset"):
@@ -80,9 +82,10 @@ class LinearDataset:
             dataset_name = f"partial_dataset_{i}"
             save_dataset(x_datasets[i], y_datasets[i], save_path, dataset_name)
             fig, ax = plt.subplots(1, 1)
-            plot_dataset(ax, x_datasets[i], y_datasets[i], dataset_name)
+            plot_dataset(ax, x_datasets[i], y_datasets[i])
             fig.savefig(str(save_path) + '/' + dataset_name + ".png")
-
+            plt.close(fig)
+        
     def assign_partial_datasets(self, peripherals: list[UartPeripheral]):
         peripheral_index = 0
         dataset_path = Path(self._path, "initial_datasets")
@@ -91,11 +94,12 @@ class LinearDataset:
                 data = np.genfromtxt(
                     str(dataset_path) + "/" + file, delimiter=",", dtype=int, skip_header=True
                 )
-                x_values = data[0:, 0].tolist()
-                y_values = data[0:, 1].tolist()
+                x_values = data[0:, 0]
+                y_values = data[0:, 1]
 
                 peripherals[peripheral_index].x_values = x_values
                 peripherals[peripheral_index].y_values = y_values
+                peripherals[peripheral_index].dataset_len = len(x_values)
 
                 peripheral_index = peripheral_index + 1
                 
@@ -130,35 +134,45 @@ def calculate_rmse(
     predictions = inputs * weight + bias
     rmse = np.sqrt(np.mean(np.square(targets - predictions)))
 
-    return round(rmse, 2)
+    return round(rmse, 1)
 
 
 def create_final_plots(
-    weight, bias, peripherals: list[UartPeripheral], full_dataset: LinearDataset
+    weight, bias, rmse, peripherals: list[UartPeripheral], full_dataset: LinearDataset
 ):
     save_path = Path(full_dataset._path, "final_results")  # FIXME: Using private attribute
     # max_x_value = full_dataset.x_values.max()
     # min_x_value = full_dataset.x_values.min()
     predictions = weight * full_dataset.x_values + bias
 
-    num_plots = len(peripherals)
-    # TODO: Add RMSE to plots
-    # TODO: Add titles
-    for i in range(num_plots):
-        plot_name = f"final_result_{peripherals[i].nickname}"
+    for peripheral in peripherals:
+        plot_name = f"final_result_{peripheral.nickname}"
         fig, ax = plt.subplots(1, 1)
-        ax = plot_dataset(ax, peripherals[i].x_values, peripherals[i].y_values, plot_name)
-        ax.plot(full_dataset.x_values, predictions, "-r", label=f"Prediction ({weight}x + {bias})")
+        ax = plot_dataset(ax, peripheral.x_values, peripheral.y_values)
+        fig.suptitle(plot_name)
+        ax.set_title(f"{peripheral.dataset_len} data points, RMSE: {peripheral.final_rmse}") 
+        ax.plot(full_dataset.x_values, predictions, "-r", label=f"Prediction (y = {weight}x + {bias})")
+        ax.legend()
         fig.savefig(str(save_path) + '/' + plot_name + ".png")
+        plt.close(fig)
 
-def plot_dataset(ax: Axes, x_values, y_values, dataset_name: str) -> Axes:
+    
+    # FIXME: remove boilerplate
+    plot_name = "final_result_full_dataset"
+    fig, ax = plt.subplots(1, 1)
+    ax = plot_dataset(ax, full_dataset.x_values, full_dataset.y_values)
+    fig.suptitle(plot_name)
+    ax.set_title(f"{full_dataset._num_points} data points, RMSE: {rmse}")  # FIXME: Using private attribute
+    ax.plot(full_dataset.x_values, predictions, "-r", label=f"Prediction (y = {weight}x + {bias})")
+    ax.legend()
+    fig.savefig(str(save_path) + '/' + plot_name + ".png")
+
+def plot_dataset(ax: Axes, x_values, y_values) -> Axes:
     ax.scatter(x_values, y_values)
-    ax.set_title(f"{dataset_name}, {len(x_values)} data points.")
     ax.set_xlabel("X-Values")
     ax.set_ylabel("Y-Values")
     
     return ax
-
 
 
 def get_total_dataset():

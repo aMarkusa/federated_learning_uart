@@ -115,6 +115,8 @@ class TrainingHost:
         else:
             self._consecutive_rmse_increases = self._consecutive_rmse_increases + 1
             if self._consecutive_rmse_increases >= self.training_limit:
+                for peripheral in self.uart_peripherals:
+                    peripheral.final_rmse = calculate_rmse(self.best_global_parameters[0], self.best_global_parameters[1], peripheral.x_values, peripheral.y_values)
                 return True
 
         return False
