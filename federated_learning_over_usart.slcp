@@ -23,7 +23,7 @@ source:
 - {path: main.c}
 - {path: app_iostream_usart.c}
 include:
-- path: ''
+- path: .
   file_list:
   - {path: app.h}
   - {path: app_iostream_usart.h}

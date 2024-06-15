@@ -51,8 +51,8 @@ void app_iostream_usart_init(void)
 {
     sl_iostream_set_default(sl_iostream_vcom_handle);
 
-    training_data.x_values = NULL;
-    training_data.y_values = NULL;
+    training_data.model_inputs = NULL;
+    training_data.model_targets = NULL;
     training_data.x_len = 0;
     training_data.y_len = 0;
 }
@@ -68,22 +68,22 @@ void fl_fsm(void)
     switch (fsm.state) {
         case RECEIVE_DATA:
             app_iostream_usart_process_action();
-            if (training_data.x_values != NULL && training_data.x_len == training_data.y_len && model_parameters_received) {
+            if (training_data.model_inputs != NULL && training_data.x_len == training_data.y_len && model_parameters_received) {
                 set_new_state(TRAIN_MODEL);
             }
             break;
         case TRAIN_MODEL:
-            lowest_mse = train_model(training_data.x_len, &current_w, &current_b, training_data.x_values, training_data.y_values, &lowest_mse);
+            lowest_mse = train_model(training_data.x_len, &current_w, &current_b, training_data.model_inputs, training_data.model_targets, &lowest_mse);
             set_new_state(SEND_DATA);
             break;
         case SEND_DATA:
             float parameters[3] = {current_w, current_b, lowest_mse};
             send_data((void *)parameters, 3, LOCAL_MODEL_PARAMETERS, 0);
-            if (training_data.x_values != NULL) {
-                free(training_data.x_values);
-                free(training_data.y_values);
-                training_data.x_values = NULL;
-                training_data.y_values = NULL;
+            if (training_data.model_inputs != NULL) {
+                free(training_data.model_inputs);
+                free(training_data.model_targets);
+                training_data.model_inputs = NULL;
+                training_data.model_targets = NULL;
             }
             model_parameters_received = false;
             set_new_state(RECEIVE_DATA);
@@ -116,10 +116,10 @@ void read_and_handle_uart_packet(uint8_t *data_buffer)
             model_parameters_received = true;
             break;
         case DATASET_X:
-            training_data.x_len = training_data_handler(data_buffer, data_len, &training_data.x_values, sequence_nr);
+            training_data.x_len = training_data_handler(data_buffer, data_len, &training_data.model_inputs, sequence_nr);
             break;
         case DATASET_Y:
-            training_data.y_len = training_data_handler(data_buffer, data_len, &training_data.y_values, sequence_nr);
+            training_data.y_len = training_data_handler(data_buffer, data_len, &training_data.model_targets, sequence_nr);
             break;
         default:
     }

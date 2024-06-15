@@ -13,119 +13,126 @@ from datetime import datetime
 script_path = str(Path(__file__).resolve().parent)
 
 # TODO: create validation set
-# TODO: Rename X- and Y-Values to inputs and targets
-
 
 class LinearDataset:
     def __init__(
         self,
-        num_points: int,
+        dataset_len: int,
         weight,
         bias,
         value_range=50,
         min_points_per_dataset=100,
-        output_filename: str = "linear_dataset",
     ):
-        self._num_points = num_points
+        self._dataset_len = dataset_len
         self._weight = weight
         self._bias = bias
         self._value_range = value_range
         self._min_points_per_dataset = min_points_per_dataset
-        self._x_values = None
-        self._y_values = None
+        self._model_inputs = None
+        self._model_targets = None
         self._initial_model = None
+        self._uuid = None
+        self._initial_datasets_path = None
+
+    def generate_dataset(self, dataset_parent_folder_path: str, full_dataset_name: str):
         self._uuid = datetime.now().strftime('%Y%m-%d%H-%M%S-') + str(uuid4())
-        self._path = Path(script_path, "datasets", self._uuid)
-
-        os.makedirs(Path(self._path, "initial_datasets"))
-        os.makedirs(Path(self._path, "final_results"))
-        self.generate_dataset()
-
-    def generate_dataset(self):
-        self._x_values = np.random.randint(low=-100, high=100, size=self._num_points)
-        self._y_values = (
-            self._weight * self._x_values
+        self._initial_datasets_path = Path(dataset_parent_folder_path, self._uuid, "inital_datasets")
+        os.makedirs(self._initial_datasets_path, exist_ok= False)
+        
+        self._model_inputs = np.random.randint(low=-100, high=100, size=self._dataset_len)
+        self._model_targets = (
+            self._weight * self._model_inputs
             + self._bias
             + np.random.randint(
-                low=-(self._value_range), high=self._value_range, size=self._num_points
+                low=-(self._value_range), high=self._value_range, size=self._dataset_len
             )
         )
-
-        save_path = Path(self._path, "initial_datasets")
-        dataset_name = "full_dataset"
-        save_dataset(self._x_values, self._y_values, save_path, dataset_name)
+        save_dataset(self._model_inputs, self._model_targets, self._initial_datasets_path, full_dataset_name)
         fig, ax = plt.subplots(1, 1)
-        ax = plot_dataset(ax, self._x_values, self._y_values)
-        fig.suptitle(dataset_name)
-        fig.savefig(str(save_path)+ '/' + dataset_name + ".png")
+        ax = plot_dataset(ax, self._model_inputs, self._model_targets)
+        fig.suptitle(full_dataset_name)
+        fig.savefig(str(self._initial_datasets_path) + '/' + full_dataset_name + ".png")
         
-    def divide_and_save_datasets(self, divisor, filename="partial_dataset"):
+        
+    def divide_and_save_datasets(self, divisor, partial_dataset_name: str):
         split_indices = (
             np.random.choice(
-                self._num_points - self._min_points_per_dataset,
+                self._dataset_len - self._min_points_per_dataset,
                 divisor - 1,
                 replace=False,
             )
             + self._min_points_per_dataset
         )
         split_indices.sort()
-        x_datasets = np.split(self._x_values, split_indices)
-        y_datasets = np.split(self._y_values, split_indices)
+        x_datasets = np.split(self._model_inputs, split_indices)
+        y_datasets = np.split(self._model_targets, split_indices)
 
-        # old_files = os.listdir(script_path)
-        # for file in old_files:
-        #     if file.endswith('.csv') or file.endswith('.png'):
-        #         os.remove(script_path + '/' + file)
-
-        save_path = Path(self._path, "initial_datasets")
+    
         for i in range(len(x_datasets)):
             dataset_name = f"partial_dataset_{i}"
-            save_dataset(x_datasets[i], y_datasets[i], save_path, dataset_name)
+            save_dataset(x_datasets[i], y_datasets[i], self._initial_datasets_path, partial_dataset_name)
             fig, ax = plt.subplots(1, 1)
             plot_dataset(ax, x_datasets[i], y_datasets[i])
-            fig.savefig(str(save_path) + '/' + dataset_name + ".png")
+            fig.savefig(str(self._initial_datasets_path) + '/' + partial_dataset_name)
             plt.close(fig)
+            
+    def create_final_plots(
+        self, weight, bias, global_rmse, peripherals: list[UartPeripheral], dataset_parent_folder_path: str
+    ):
+        # max_x_value = full_dataset.model_inputs.max()
+        # min_x_value = full_dataset.model_inputs.min()
+
+        final_results_folder_path = Path(dataset_parent_folder_path, self._uuid, "final_datasets")
+        os.makedirs(final_results_folder_path, exist_ok= False)
+        predictions = weight * self.model_inputs + bias
+        num_plots = len(peripherals) + 1  # We are also plotting the full dataset
+
+        for i in range(num_plots):
+            fig, ax = plt.subplots(1, 1)
+            if i == (num_plots - 1):  # We are on the last iteration
+                plot_name = "final_result_full_dataset"
+                subtitle = f"{self._dataset_len} data points, RMSE: {global_rmse}"  # FIXME: using private attribute
+                inputs = self.model_inputs
+                targets = self.model_targets
+            else:
+                plot_name = f"final_result_{peripherals[i].nickname}"
+                subtitle = f"{peripherals[i].dataset_len} data points, RMSE: {peripherals[i].final_rmse}"
+                inputs = peripherals[i].model_inputs
+                targets = peripherals[i].model_targets
+                
+            ax = plot_dataset(ax, inputs, targets)
+            fig.suptitle(plot_name)
+            ax.set_title(subtitle) 
+            ax.plot(self.model_inputs, predictions, "-r", label=f"Prediction (y = {weight}x + {bias})")
+            ax.legend()
+            fig.savefig(str(final_results_folder_path) + '/' + plot_name + ".png")
+            plt.close(fig)
+            
         
-    def assign_partial_datasets(self, peripherals: list[UartPeripheral]):
-        peripheral_index = 0
-        dataset_path = Path(self._path, "initial_datasets")
-        for file in os.listdir(dataset_path):
-            if file.endswith(".csv") and "partial" in file:
-                data = np.genfromtxt(
-                    str(dataset_path) + "/" + file, delimiter=",", dtype=int, skip_header=True
-                )
-                x_values = data[0:, 0]
-                y_values = data[0:, 1]
-
-                peripherals[peripheral_index].x_values = x_values
-                peripherals[peripheral_index].y_values = y_values
-                peripherals[peripheral_index].dataset_len = len(x_values)
-
-                peripheral_index = peripheral_index + 1
                 
     def fit_initial_model(self):
         model = LinearRegression()
-        model.fit(self._x_values, self._y_values)
+        model.fit(self._model_inputs, self._model_targets)
         self._initial_model = model
 
     def validate_parameters(self, weight, bias):
-        return calculate_rmse(weight, bias, self.x_values, self.y_values)
+        return calculate_rmse(weight, bias, self.model_inputs, self.model_targets)
 
     @property
-    def x_values(self):
-        return self._x_values
+    def model_inputs(self):
+        return self._model_inputs
 
-    @x_values.setter
-    def x_values(self, x_values: list):
-        self._x_values = x_values
+    @model_inputs.setter
+    def model_inputs(self, model_inputs: list):
+        self._model_inputs = model_inputs
 
     @property
-    def y_values(self):
-        return self._y_values
+    def model_targets(self):
+        return self._model_targets
 
-    @x_values.setter
-    def x_values(self, y_values: list):
-        self._y_values = y_values
+    @model_inputs.setter
+    def model_inputs(self, model_targets: list):
+        self._model_targets = model_targets
 
 
 def calculate_rmse(
@@ -137,61 +144,48 @@ def calculate_rmse(
     return round(rmse, 1)
 
 
-def create_final_plots(
-    weight, bias, rmse, peripherals: list[UartPeripheral], full_dataset: LinearDataset
-):
-    save_path = Path(full_dataset._path, "final_results")  # FIXME: Using private attribute
-    # max_x_value = full_dataset.x_values.max()
-    # min_x_value = full_dataset.x_values.min()
-    predictions = weight * full_dataset.x_values + bias
-
-    for peripheral in peripherals:
-        plot_name = f"final_result_{peripheral.nickname}"
-        fig, ax = plt.subplots(1, 1)
-        ax = plot_dataset(ax, peripheral.x_values, peripheral.y_values)
-        fig.suptitle(plot_name)
-        ax.set_title(f"{peripheral.dataset_len} data points, RMSE: {peripheral.final_rmse}") 
-        ax.plot(full_dataset.x_values, predictions, "-r", label=f"Prediction (y = {weight}x + {bias})")
-        ax.legend()
-        fig.savefig(str(save_path) + '/' + plot_name + ".png")
-        plt.close(fig)
-
-    
-    # FIXME: remove boilerplate
-    plot_name = "final_result_full_dataset"
-    fig, ax = plt.subplots(1, 1)
-    ax = plot_dataset(ax, full_dataset.x_values, full_dataset.y_values)
-    fig.suptitle(plot_name)
-    ax.set_title(f"{full_dataset._num_points} data points, RMSE: {rmse}")  # FIXME: Using private attribute
-    ax.plot(full_dataset.x_values, predictions, "-r", label=f"Prediction (y = {weight}x + {bias})")
-    ax.legend()
-    fig.savefig(str(save_path) + '/' + plot_name + ".png")
-
-def plot_dataset(ax: Axes, x_values, y_values) -> Axes:
-    ax.scatter(x_values, y_values)
+def plot_dataset(ax: Axes, model_inputs, model_targets) -> Axes:
+    ax.scatter(model_inputs, model_targets)
     ax.set_xlabel("X-Values")
     ax.set_ylabel("Y-Values")
     
     return ax
 
 
-def get_total_dataset():
-    for file in os.listdir(script_path + "/" + "datasets"):
-        if "total_linear_dataset" in file:
-            file_path = script_path + "/" + "datasets" + "/" + file
-            data = np.genfromtxt(file_path, delimiter=",", dtype=int, skip_header=True)
-            x_values = data[0:, 0].tolist()
-            y_values = data[0:, 1].tolist()
+def get_dataset(dataset_path: str):
+    data = np.genfromtxt(dataset_path, delimiter=",", dtype=int, skip_header=True)
+    model_inputs = data[0:, 0].tolist()
+    model_targets = data[0:, 1].tolist()
+    
+    return np.array(model_inputs, model_targets)
 
 
-def prepare_datasets(number_of_peripherals, weight, bias, num_of_datapoints):
-    dataset = LinearDataset(num_points=num_of_datapoints, weight=weight, bias=bias)
-    dataset.divide_and_save_datasets(number_of_peripherals)
+def prepare_datasets(number_of_peripherals, weight, bias, num_of_datapoints, dataset_parent_folder_path: str):
+    dataset = LinearDataset(dataset_len=num_of_datapoints, weight=weight, bias=bias)
+    dataset.generate_dataset(dataset_parent_folder_path, "full_dataset")
+    dataset.divide_and_save_datasets(number_of_peripherals, "partial_dataset")
 
     return dataset
 
 
-def save_dataset(x_values, y_values, output_path: Path, filename: str):
-    df = pd.DataFrame({"X": x_values, "Y": y_values})
-    save_path = str(Path(output_path, filename + ".csv"))
+def save_dataset(model_inputs, model_targets, dataset_folder_path: str, filename: str):
+    df = pd.DataFrame({"X": model_inputs, "Y": model_targets})
+    save_path = str(Path(dataset_folder_path, filename + ".csv"))
     df.to_csv(save_path, index=False)
+
+
+def assign_partial_datasets(peripherals: list[UartPeripheral], dataset_folder_path: str):
+        peripheral_index = 0
+        for file in os.listdir(dataset_folder_path):
+            if file.endswith(".csv") and "partial" in file:
+                data = np.genfromtxt(
+                    str(dataset_folder_path) + "/" + file, delimiter=",", dtype=int, skip_header=True
+                )
+                model_inputs = data[0:, 0]
+                model_targets = data[0:, 1]
+
+                peripherals[peripheral_index].model_inputs = model_inputs
+                peripherals[peripheral_index].model_targets = model_targets
+                peripherals[peripheral_index].dataset_len = len(model_inputs)
+
+                peripheral_index = peripheral_index + 1

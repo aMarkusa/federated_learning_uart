@@ -45,8 +45,8 @@ struct StateMachine {
 };
 
 struct TrainingData {
-    int16_t* x_values;
-    int16_t* y_values;
+    int16_t* model_inputs;
+    int16_t* model_targets;
     uint16_t x_len;
     uint16_t y_len;
 };

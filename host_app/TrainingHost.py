@@ -91,7 +91,7 @@ class TrainingHost:
             model_weight = self._latest_global_parameters[0]
             model_bias = self._latest_global_parameters[1]
             self._latest_rmse = calculate_rmse(
-                model_weight, model_bias, self._dataset.x_values, self._dataset.y_values
+                model_weight, model_bias, self._dataset.model_inputs, self._dataset.model_targets
             )
             logger().info(f"Training iteration {self._current_training_iteration} resulted in:" +
                            f" RMSE: {self._latest_rmse}, w: {model_weight}, b: {model_bias}")
@@ -116,7 +116,7 @@ class TrainingHost:
             self._consecutive_rmse_increases = self._consecutive_rmse_increases + 1
             if self._consecutive_rmse_increases >= self.training_limit:
                 for peripheral in self.uart_peripherals:
-                    peripheral.final_rmse = calculate_rmse(self.best_global_parameters[0], self.best_global_parameters[1], peripheral.x_values, peripheral.y_values)
+                    peripheral.final_rmse = calculate_rmse(self.best_global_parameters[0], self.best_global_parameters[1], peripheral.model_inputs, peripheral.model_targets)
                 return True
 
         return False
@@ -152,11 +152,11 @@ class TrainingHost:
 
     def send_out_training_data(self):
         for peripheral in self.uart_peripherals:
-            x_values = peripheral._x_values
-            y_values = peripheral._y_values
+            model_inputs = peripheral._model_inputs
+            model_targets = peripheral._model_targets
             max_payload_size = int(self._max_payload_size / 2)
-            send_sequence(DataType.DATASET_X, x_values, max_payload_size, peripheral)
-            send_sequence(DataType.DATASET_Y, y_values, max_payload_size, peripheral)
+            send_sequence(DataType.DATASET_X, model_inputs, max_payload_size, peripheral)
+            send_sequence(DataType.DATASET_Y, model_targets, max_payload_size, peripheral)
 
     @property
     def max_training_iterations(self):

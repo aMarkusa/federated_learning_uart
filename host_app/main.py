@@ -2,7 +2,7 @@
 from serial.tools import list_ports
 from UartPeripheral import UartPeripheral
 from TrainingHost import TrainingHost
-import datasets.LinearDataset as ld
+from datasets.LinearDataset import *
 import logging
 from time import sleep
 import sys
@@ -19,7 +19,7 @@ START_B = 1
 START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
-
+dataset_parent_folder_path = Path(Path(__file__).resolve().parent, "datasets")
 
 def logger():
     return logging.getLogger(__name__)
@@ -40,6 +40,10 @@ if __name__ == "__main__":
     peripheral_ports = [
         port for port in ports if port.device.startswith("/dev/cu.usbmodem")
     ]
+    if len(peripheral_ports) == 0:
+        logger().error("No peripherals detected. Exiting program.")
+        exit()
+        
     logger().info(f"{len(peripheral_ports)} peripherals detected. Press enter to generate training data and send it to the peripherals.")
     input()
     
@@ -48,29 +52,33 @@ if __name__ == "__main__":
         for port in peripheral_ports
     ]
     if GENERATE_DATASET:
-        full_dataset = ld.prepare_datasets(len(peripherals), -5, 2, NUMBER_OF_DATAPOINTS)
-    full_dataset.assign_partial_datasets(peripherals)
+        full_dataset = prepare_datasets(len(peripherals), -5, 2, NUMBER_OF_DATAPOINTS, str(dataset_parent_folder_path))
+    assign_partial_datasets(peripherals, str(full_dataset._initial_datasets_path))
 
-    # Create a trainer, connect to the peripherals, and send out the training data
-    trainer = TrainingHost(
-        starting_parameters=[START_W, START_B],
-        uart_peripherals=peripherals,
-        max_training_iterations=MAX_ITERATIONS,
-        dataset=full_dataset,
-        training_limit=2,
-    )
-    trainer.connect_to_uart_peripherals()
-    trainer.send_out_training_data()
+    # # Create a trainer, connect to the peripherals, and send out the training data
+    # trainer = TrainingHost(
+    #     starting_parameters=[START_W, START_B],
+    #     uart_peripherals=peripherals,
+    #     max_training_iterations=MAX_ITERATIONS,
+    #     dataset=full_dataset,
+    #     training_limit=2,
+    # )
+    # trainer.connect_to_uart_peripherals()
+    # trainer.send_out_training_data()
 
-    logger().info(f"Training data sent out. Press enter to start training.")
-    input()
-    # # Print the initial parameters for each peripheral, and start the training
-    for peripheral in peripherals:
-        trainer.print_peripheral_parameters(peripheral)
-    trainer.train_model()
+    # logger().info(f"Training data sent out. Press enter to start training.")
+    # input()
+    # # # Print the initial parameters for each peripheral, and start the training
+    # for peripheral in peripherals:
+    #     trainer.print_peripheral_parameters(peripheral)
+    # trainer.train_model()
 
-    # Once training is done, create plots to visualize the model
-    model_weight = trainer.best_global_parameters[0]
-    model_bias = trainer.best_global_parameters[1]
-    model_rmse = trainer.lowest_rmse
-    ld.create_final_plots(model_weight, model_bias, model_rmse, peripherals, full_dataset)
+    # # Once training is done, create plots to visualize the model
+    # model_weight = trainer.best_global_parameters[0]
+    # model_bias = trainer.best_global_parameters[1]
+    # model_rmse = trainer.lowest_rmse
+    
+    model_weight = -1
+    model_bias = 2
+    model_rmse = 30
+    full_dataset.create_final_plots(model_weight, model_bias, model_rmse, peripherals, str(dataset_parent_folder_path))

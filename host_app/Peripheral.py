@@ -12,8 +12,8 @@ class Peripheral:
         self._active_training = False
         self._training_done = False
         self._dataset_len = None
-        self._x_values = []
-        self._y_values = []
+        self._model_inputs = []
+        self._model_targets = []
 
     @property
     def params(self):
@@ -103,17 +103,17 @@ class Peripheral:
         self._training_done = done
 
     @property
-    def x_values(self):
-        return self._x_values
+    def model_inputs(self):
+        return self._model_inputs
 
-    @x_values.setter
-    def x_values(self, values):
-        self._x_values = values
+    @model_inputs.setter
+    def model_inputs(self, values):
+        self._model_inputs = values
 
     @property
-    def y_values(self):
-        return self._y_values
+    def model_targets(self):
+        return self._model_targets
 
-    @y_values.setter
-    def y_values(self, values):
-        self._y_values = values
+    @model_targets.setter
+    def model_targets(self, values):
+        self._model_targets = values
