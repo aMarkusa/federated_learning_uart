@@ -26,7 +26,7 @@ class LinearDataset:
         dataset_len: int,
         weight,
         bias,
-        value_range=50,
+        value_range=100,
         min_points_per_dataset=100,
     ):
         self._dataset_len = dataset_len
@@ -39,7 +39,7 @@ class LinearDataset:
         self._initial_model = None
         self._uuid = None
         self._initial_datasets_path = None
-        self._dataset_target_range = 32000  # +- 32000 (approx int16_t)
+        self._dataset_target_range = 500  # +- 32000 (approx int16_t)
 
     def generate_dataset(self, dataset_parent_folder_path: str, full_dataset_name: str):
         self._uuid = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
@@ -87,7 +87,7 @@ class LinearDataset:
         y_datasets = np.split(self._model_targets, split_indices)
 
         for i in range(len(x_datasets)):
-            dataset_name = f"partial_dataset_{i}"
+            partial_dataset_name = partial_dataset_name + '_' + str(i)
             save_dataset(
                 x_datasets[i],
                 y_datasets[i],
@@ -209,7 +209,7 @@ def prepare_datasets(
     dataset_parent_folder_path: str,
 ):
     dataset = LinearDataset(
-        dataset_len=num_of_datapoints, weight=weight, bias=bias, value_range=200
+        dataset_len=num_of_datapoints, weight=weight, bias=bias
     )
     dataset.generate_dataset(dataset_parent_folder_path, "full_dataset")
     dataset.divide_and_save_datasets(number_of_peripherals, "partial_dataset")

@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define LEARNING_RATE 0.0001
-#define MAX_ITERATIONS 10000
-#define TRAINING_LIMIT 3
+#define LEARNING_RATE 0.00001
+#define MAX_ITERATIONS 1000
+#define TRAINING_LIMIT 2
 
 
 // Function to calculate the mean squared error
