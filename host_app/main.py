@@ -2,7 +2,7 @@
 from serial.tools import list_ports
 from UartPeripheral import UartPeripheral
 from TrainingHost import TrainingHost
-from datasets.LinearDataset import *
+from LinearDataset import *
 import logging
 from time import sleep
 import sys
@@ -20,6 +20,8 @@ START_PARAMS = f"{START_W}:{START_B}"
 parsed_data = []
 consecutive_increases = 0
 dataset_parent_folder_path = Path(Path(__file__).resolve().parent, "datasets")
+already_existing_dataset_path = ""
+
 
 def logger():
     return logging.getLogger(__name__)
@@ -43,17 +45,31 @@ if __name__ == "__main__":
     if len(peripheral_ports) == 0:
         logger().error("No peripherals detected. Exiting program.")
         exit()
-        
-    logger().info(f"{len(peripheral_ports)} peripherals detected. Press enter to generate training data and send it to the peripherals.")
+
+    logger().info(
+        f"{len(peripheral_ports)} peripherals detected. Press enter to generate training data and send it to the peripherals."
+    )
     input()
-    
+
     peripherals = [
-        UartPeripheral(nickname=port.name , initial_training_params=[START_W, START_B], port=port.device)
+        UartPeripheral(
+            nickname=port.name,
+            initial_training_params=[START_W, START_B],
+            port=port.device,
+        )
         for port in peripheral_ports
     ]
     if GENERATE_DATASET:
-        full_dataset = prepare_datasets(len(peripherals), -5, 2, NUMBER_OF_DATAPOINTS, str(dataset_parent_folder_path))
-    assign_partial_datasets(peripherals, str(full_dataset._initial_datasets_path))
+        full_dataset = prepare_datasets(
+            len(peripherals),
+            -5,
+            2,
+            NUMBER_OF_DATAPOINTS,
+            str(dataset_parent_folder_path),
+        )
+        assign_partial_datasets(peripherals, str(full_dataset._initial_datasets_path))
+    else:
+        assign_partial_datasets(peripherals, already_existing_dataset_path)
 
     # # Create a trainer, connect to the peripherals, and send out the training data
     # trainer = TrainingHost(
@@ -77,8 +93,14 @@ if __name__ == "__main__":
     # model_weight = trainer.best_global_parameters[0]
     # model_bias = trainer.best_global_parameters[1]
     # model_rmse = trainer.lowest_rmse
-    
+
     model_weight = -1
     model_bias = 2
     model_rmse = 30
-    full_dataset.create_final_plots(model_weight, model_bias, model_rmse, peripherals, str(dataset_parent_folder_path))
+    full_dataset.create_final_plots(
+        model_weight,
+        model_bias,
+        model_rmse,
+        peripherals,
+        str(dataset_parent_folder_path),
+    )

@@ -1,8 +1,12 @@
-# TODO: Add a lot of files...
 host_app/__pycache__
 trashed_modified_files
-host_app/datasets/
+host_app/datasets/*
 !host_app/datasets/LinearDataset.py
 .projectlinkstore
 .uceditor
 *.png
+federated_learning_over_usart_cmake/*
+!federated_learning_over_usart_cmake/CMakeLists.txt
+host_app/.DS_Store
+gecko_sdk_4.4.3/*
+GNU\ ARM\ v12.2.1\ -\ Default/

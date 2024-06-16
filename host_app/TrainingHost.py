@@ -3,7 +3,7 @@ import logging
 from UartPeripheral import *
 from UartProtocol import *
 from threading import Thread
-from datasets.LinearDataset import LinearDataset, calculate_rmse
+from LinearDataset import LinearDataset, calculate_rmse
 import time
 
 
