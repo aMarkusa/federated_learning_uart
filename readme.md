@@ -1,7 +1,8 @@
-# IOStream USART Bare Metal
+# Federated Learning Over UART
 
-This example project demonstrates the use of UART communication over the virtual COM port (VCOM) in a bare metal environment using I/O stream service. The example will echo back any characters it receives over the serial connection. The VCOM serial port can be used over USB or by connecting to port 4902 if the kit is connected via internet.
+## Introduction
+This project serves as a proof of concept for federated learning using ARM Cortex-M MCUs (in this case Silabs MG24). The communication between the training server and the clients is implemented in UART, but will be replaced with BLE at a later stage. Also, the simple linear regression model will be replaced with somethin a bit more impressive, such as deep learning, when I've gained the required knowledge.
 
-## Requirements
+My initial goal with this project was to create a framework that could be used to implement federated learning in IoT networks. This would the framework would be portable between different communication protocols.
 
-Silicon Labs board with USB port or ethernet port.
+### More to come...
