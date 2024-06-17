@@ -104,6 +104,9 @@ class TrainingHost:
                 self.update_peripheral_parameters()
                 self._current_training_iteration = self._current_training_iteration + 1
 
+            for peripheral in self.uart_peripherals:
+                    peripheral.final_rmse = calculate_rmse(self.best_global_parameters[0], self.best_global_parameters[1], peripheral.model_inputs, peripheral.model_targets)
+            
     def is_training_done(self):
         if (
             self._current_training_iteration == 0
@@ -115,8 +118,6 @@ class TrainingHost:
         else:
             self._consecutive_rmse_increases = self._consecutive_rmse_increases + 1
             if self._consecutive_rmse_increases >= self.training_limit:
-                for peripheral in self.uart_peripherals:
-                    peripheral.final_rmse = calculate_rmse(self.best_global_parameters[0], self.best_global_parameters[1], peripheral.model_inputs, peripheral.model_targets)
                 return True
 
         return False

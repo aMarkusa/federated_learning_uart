@@ -14,6 +14,7 @@ import logging
 script_path = str(Path(__file__).resolve().parent)
 
 # TODO: create validation set
+# TODO: Add Initial guess line to 
 
 
 def logger():
@@ -87,22 +88,24 @@ class LinearDataset:
         y_datasets = np.split(self._model_targets, split_indices)
 
         for i in range(len(x_datasets)):
-            partial_dataset_name = partial_dataset_name + '_' + str(i)
+            dataset_name = partial_dataset_name + '_' + str(i)
             save_dataset(
                 x_datasets[i],
                 y_datasets[i],
                 self._initial_datasets_path,
-                partial_dataset_name,
+                dataset_name,
             )
             fig, ax = plt.subplots(1, 1)
             plot_dataset(ax, x_datasets[i], y_datasets[i])
-            fig.savefig(str(self._initial_datasets_path) + "/" + partial_dataset_name)
+            fig.savefig(str(self._initial_datasets_path) + "/" + dataset_name)
             plt.close(fig)
 
     def create_final_plots(
         self,
         weight,
         bias,
+        initial_weight,
+        initial_bias,
         global_rmse,
         peripherals: list[UartPeripheral],
         dataset_parent_folder_path: str,
@@ -115,15 +118,23 @@ class LinearDataset:
         )
         os.makedirs(final_results_folder_path, exist_ok=False)
         predictions = weight * self.model_inputs + bias
+        initial_predictions = initial_weight * self.model_inputs + initial_bias
         num_plots = len(peripherals) + 1  # We are also plotting the full dataset
 
         for i in range(num_plots):
             fig, ax = plt.subplots(1, 1)
             if i == (num_plots - 1):  # We are on the last iteration
                 plot_name = "final_result_full_dataset"
-                subtitle = f"{self.dataset_len} data points, RMSE: {global_rmse}"
+                subtitle = f"{self.dataset_len} data points, {len(peripherals)} peripherals, RMSE: {global_rmse}"
                 inputs = self.model_inputs
                 targets = self.model_targets
+                ax.plot(
+                    self.model_inputs,
+                    initial_predictions,
+                    "-k",
+                    label=f"Initial prediction (y = {initial_weight}x + {initial_bias})",
+                    zorder=2
+                )
             else:
                 plot_name = f"final_result_{peripherals[i].nickname}"
                 subtitle = f"{peripherals[i].dataset_len} data points, RMSE: {peripherals[i].final_rmse}"
@@ -137,7 +148,7 @@ class LinearDataset:
                 self.model_inputs,
                 predictions,
                 "-r",
-                label=f"Prediction (y = {weight}x + {bias})",
+                label=f"Final prediction (y = {weight}x + {bias})",
             )
             ax.legend()
             fig.savefig(str(final_results_folder_path) + "/" + plot_name + ".png")

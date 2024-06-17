@@ -79,7 +79,7 @@ void fl_fsm(void)
         case SEND_DATA:
             float parameters[3] = {current_w, current_b, lowest_mse};
             send_data((void *)parameters, 3, LOCAL_MODEL_PARAMETERS, 0);
-            /*if (training_data.model_inputs != NULL) {
+            /*if (training_data.model_inputs != NULL) { // TODO: Implement this so that after the training is finished, we can free up the data.
                 free(training_data.model_inputs);
                 free(training_data.model_targets);
                 training_data.model_inputs = NULL;

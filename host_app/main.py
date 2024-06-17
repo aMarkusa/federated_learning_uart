@@ -14,13 +14,13 @@ GENERATE_DATASET = True
 NUMBER_OF_DATAPOINTS = 5000
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
-START_W = 2.6
-START_B = 1
-START_PARAMS = f"{START_W}:{START_B}"
+INITIAL_W = -1
+INITIAL_B = 250
+INITIAL_PARAMS = f"{INITIAL_W}:{INITIAL_B}"
 parsed_data = []
 consecutive_increases = 0
 dataset_parent_folder_path = Path(Path(__file__).resolve().parent, "datasets")
-already_existing_dataset_path = ""
+already_existing_dataset_path = "/Users/maanders1/personal/git/federated_learning_project/fl_workspace/federated_learning_over_usart/host_app/datasets/202406-1718-3304-5a0bac66-1e14-4296-8358-2cb372ae01cc/inital_datasets/"
 
 
 def logger():
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     peripherals = [
         UartPeripheral(
             nickname=port.name,
-            initial_training_params=[START_W, START_B],
+            initial_training_params=[INITIAL_W, INITIAL_B],
             port=port.device,
         )
         for port in peripheral_ports
@@ -69,11 +69,12 @@ if __name__ == "__main__":
         )
         assign_partial_datasets(peripherals, str(full_dataset._initial_datasets_path))
     else:
+        # TODO: this does not work :( 
         assign_partial_datasets(peripherals, already_existing_dataset_path)
 
     # Create a trainer, connect to the peripherals, and send out the training data
     trainer = TrainingHost(
-        starting_parameters=[START_W, START_B],
+        starting_parameters=[INITIAL_W, INITIAL_B],
         uart_peripherals=peripherals,
         max_training_iterations=MAX_ITERATIONS,
         dataset=full_dataset,
@@ -84,7 +85,7 @@ if __name__ == "__main__":
 
     logger().info(f"Training data sent out. Press enter to start training.")
     input()
-    # # Print the initial parameters for each peripheral, and start the training
+    # Print the initial parameters for each peripheral, and start the training
     for peripheral in peripherals:
         trainer.print_peripheral_parameters(peripheral)
     trainer.train_model()
@@ -100,6 +101,8 @@ if __name__ == "__main__":
     full_dataset.create_final_plots(
         model_weight,
         model_bias,
+        INITIAL_W,
+        INITIAL_B,
         model_rmse,
         peripherals,
         str(dataset_parent_folder_path),
