@@ -14,8 +14,8 @@ GENERATE_DATASET = True
 NUMBER_OF_DATAPOINTS = 5000
 MAX_ITERATIONS = 100
 MAX_MSE_INCREASES = 5
-INITIAL_W = -1
-INITIAL_B = 250
+INITIAL_W = 7
+INITIAL_B = 5
 INITIAL_PARAMS = f"{INITIAL_W}:{INITIAL_B}"
 parsed_data = []
 consecutive_increases = 0
@@ -32,7 +32,8 @@ def setup_logger():
     os.environ["PYTHONUNBUFFERED"] = "1"
     logger = logging.getLogger()
     format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=format)
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=format)
+    logging.getLogger('matplotlib.font_manager').disabled = True
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ class Peripheral:
         self._lowest_rmse = None
         self.final_rmse = None
         self._consecutive_rmse_increases = 0
-        self._current_training_iteration = 0
+        self._current_training_iteration = 1
         self._ready_to_receive = True
         self._timeout = 60
         self._active_training = False
@@ -30,7 +30,7 @@ class Peripheral:
     @latest_rmse.setter
     def latest_rmse(self, rmse):
         self._latest_rmse = rmse
-        if self.current_training_iteration == 0:
+        if self.current_training_iteration == 1:
             self.lowest_rmse = rmse
         elif rmse < self.lowest_rmse:
             self.lowest_rmse = rmse

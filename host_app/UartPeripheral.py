@@ -39,7 +39,7 @@ class UartPeripheral(Peripheral):
         data = self._uart_protocol.construct_uart_packet(data_type, data, sequence)
         try:
             self.flush_input_buffer()
-            logger().info(f"Sending data: {data} to {self.port}")
+            logger().debug(f"Sending data: {data} to {self.port}")
             self._connection.write(data)
         except Exception as e:
             logger().error(e)
@@ -58,7 +58,7 @@ class UartPeripheral(Peripheral):
         parsed_data = self._uart_protocol.parse_uart_packet(
             raw_data, DataType(data_header[0])
         )
-        logger().info(f"Received data {data_header + parsed_data} from {self.port}")
+        logger().debug(f"Received data {data_header + parsed_data} from {self.port}")
 
         return parsed_data
 
